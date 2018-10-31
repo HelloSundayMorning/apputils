@@ -1,0 +1,17 @@
+# Ignore personal local configure files
+.editorconfig
+
+# Ignore temporary files
+tmp/*
+.harp
+
+# Ignore Go vendor path
+vendor
+
+.idea
+
+main
+intercomintegration
+
+.env
+

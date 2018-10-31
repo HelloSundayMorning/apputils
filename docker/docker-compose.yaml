@@ -1,0 +1,42 @@
+version: '2'
+
+services:
+  rabbitmq:
+    image: 'bitnami/rabbitmq:latest'
+    labels:
+      kompose.service.type: nodeport
+    ports:
+    - '4369:4369'
+    - '5672:5672'
+    - '25672:25672'
+    - '15672:15672'
+    volumes:
+    - 'rabbitmq_data:/bitnami'
+    environment:
+    - RABBITMQ_USERNAME=rabbitmq
+    - RABBITMQ_PASSWORD=rabbitmq
+    networks:
+    - docker-network-local
+
+  postgres:
+    image: 'bitnami/postgresql:latest'
+    ports:
+    - '5432:5432'
+    volumes:
+    - 'postgres_data:/bitnami'
+    environment:
+    - POSTGRESQL_USERNAME=postgres
+    - POSTGRESQL_PASSWORD=postgres
+    - POSTGRESQL_DATABASE=postgres
+    networks:
+    - docker-network-local
+
+volumes:
+  rabbitmq_data:
+    driver: local
+
+  postgres_data:
+    driver: local
+
+networks:
+  docker-network-local:
