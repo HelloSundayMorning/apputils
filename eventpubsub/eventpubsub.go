@@ -1,6 +1,8 @@
 package eventpubsub
 
-import "golang.org/x/net/context"
+import (
+	"golang.org/x/net/context"
+)
 
 type (
 
@@ -11,11 +13,10 @@ type (
 		InitializeQueue(appID, topic string) (err error)
 		Publish(ctx context.Context, topic string, event []byte, contentType string) (err error)
 		Subscribe(appID, topic string, processFunc ProcessEvent) (err error)
+		SubscribeWithMaxMsg(appID, topic string, processFunc ProcessEvent, maxMessages int) (err error)
 		UnSubscribe(topic string)
 		CleanUp()
 	}
-
-
 
 )
 

@@ -201,9 +201,20 @@ func (rabbit *RabbitMq) Publish(ctx context.Context, topic string, event []byte,
 
 func (rabbit *RabbitMq) Subscribe(appID, topic string, processFunc ProcessEvent) (err error) {
 
+	return rabbit.SubscribeWithMaxMsg(appID, topic, processFunc, 100)
+}
+
+func (rabbit *RabbitMq) SubscribeWithMaxMsg(appID, topic string, processFunc ProcessEvent, maxMessages int) (err error) {
+
 	appQueueName := formQueueName(appID, topic)
 
 	channel, err := rabbit.MqConnection.Channel()
+
+	if err != nil {
+		return err
+	}
+
+	err = channel.Qos(maxMessages, 9999999, false)
 
 	if err != nil {
 		return err

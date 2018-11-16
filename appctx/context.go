@@ -70,12 +70,12 @@ func NewContext(r *http.Request) (ctx context.Context) {
 
 }
 
-func NewContextFromValues(app, correlationID string) (ctx context.Context) {
+func NewContextFromValues(appID, correlationID string) (ctx context.Context) {
 
 	store := make(map[string]interface{})
 
-	store[CorrelationIdHeader] = app
-	store[AppIdHeader] = correlationID
+	store[CorrelationIdHeader] = correlationID
+	store[AppIdHeader] = appID
 
 	ctx = AppContext{
 		ValueStore: store,
