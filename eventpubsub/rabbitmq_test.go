@@ -83,7 +83,7 @@ func TestRabbitMq_Publish(t *testing.T) {
 	err := rb.Publish(ctx, topic, []byte(event), "text/plain")
 
 	assert.NotNil(t, err)
-	assert.Equal(t, "app  is not registered for topic testPublish", err.Error())
+	assert.Equal(t, "app testApp is not registered for topic testPublish", err.Error())
 
 	rb.RegisterTopic("testApp", topic)
 

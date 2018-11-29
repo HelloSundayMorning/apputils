@@ -7,25 +7,35 @@ import (
 )
 
 type (
-
 	AppEvent struct {
 		EventType string
 		Timestamp time.Time
-		Data interface{}
+		Data      json.RawMessage
 	}
-
 )
 
-func NewAppEvent(eventType string, data interface{}) AppEvent{
+func NewAppEvent(eventType string, data json.RawMessage) AppEvent {
 
 	return AppEvent{
-		EventType:eventType,
+		EventType: eventType,
 		Timestamp: time.Now().UTC(),
-		Data: data,
+		Data:      data,
 	}
 }
 
-func (event *AppEvent) ToJSON() (eventJSON []byte, err error){
+func NewAppEventFromJSON(event []byte) (appEvent AppEvent, err error) {
+
+	err = json.Unmarshal(event, &appEvent)
+
+	if err != nil {
+		return appEvent, fmt.Errorf("erro deserializing event %s to JSON, %s", string(event), err)
+	}
+
+	return appEvent, nil
+
+}
+
+func (event *AppEvent) ToJSON() (eventJSON []byte, err error) {
 
 	eventJSON, err = json.Marshal(event)
 

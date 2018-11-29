@@ -11,6 +11,7 @@ import (
 const(
 	CorrelationIdHeader = "x-correlation-id"
 	AppIdHeader         = "x-app-id"
+	FromAppIdHeader     = "x-from-app-id"
 )
 
 type (
@@ -40,12 +41,13 @@ func (ctx AppContext) Value(key interface{}) interface{} {
 	return ctx.ValueStore[key.(string)]
 }
 
-func NewContextFromDelivery(delivery amqp.Delivery) (ctx context.Context) {
+func NewContextFromDelivery(appId string, delivery amqp.Delivery) (ctx context.Context) {
 
 	store := make(map[string]interface{})
 
 	store[CorrelationIdHeader] = delivery.CorrelationId
-	store[AppIdHeader] = delivery.AppId
+	store[AppIdHeader] = appId
+	store[FromAppIdHeader] = delivery.AppId
 
 	ctx = AppContext{
 		ValueStore: store,

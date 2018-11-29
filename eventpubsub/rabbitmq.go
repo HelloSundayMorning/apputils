@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/HelloSundayMorning/apputils/appctx"
+	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/satori/go.uuid"
 	"github.com/streadway/amqp"
 )
@@ -201,7 +202,7 @@ func (rabbit *RabbitMq) Publish(ctx context.Context, topic string, event []byte,
 
 func (rabbit *RabbitMq) Subscribe(appID, topic string, processFunc ProcessEvent) (err error) {
 
-	return rabbit.SubscribeWithMaxMsg(appID, topic, processFunc, 100)
+	return rabbit.SubscribeWithMaxMsg(appID, topic, processFunc, 0)
 }
 
 func (rabbit *RabbitMq) SubscribeWithMaxMsg(appID, topic string, processFunc ProcessEvent, maxMessages int) (err error) {
@@ -214,10 +215,12 @@ func (rabbit *RabbitMq) SubscribeWithMaxMsg(appID, topic string, processFunc Pro
 		return err
 	}
 
-	err = channel.Qos(maxMessages, 9999999, false)
+	if maxMessages != 0 {
+		err = channel.Qos(maxMessages, 0, false)
 
-	if err != nil {
-		return err
+		if err != nil {
+			return fmt.Errorf("invalid Qos setup, %s", err)
+		}
 	}
 
 	deliveries, err := channel.Consume(
@@ -241,7 +244,7 @@ func (rabbit *RabbitMq) SubscribeWithMaxMsg(appID, topic string, processFunc Pro
 			select {
 			case delivery := <-deliveries:
 
-				handleDelivery(delivery, processFunc)
+				handleDelivery(appID, delivery, processFunc)
 
 			case <-rabbit.subscriptionChannels[topic]:
 
@@ -269,18 +272,20 @@ func (rabbit *RabbitMq) UnSubscribe(topic string) {
 // handleDelivery
 // Call process function. If it fails requeue the first time.
 // the second fail will send it to dead letter
-func handleDelivery(delivery amqp.Delivery, processFunc ProcessEvent) {
+func handleDelivery(appID string, delivery amqp.Delivery, processFunc ProcessEvent) {
 
 	if delivery.CorrelationId == "" {
 		id, _ := uuid.NewV4()
 		delivery.CorrelationId = id.String()
 	}
 
-	ctx := appctx.NewContextFromDelivery(delivery)
+	ctx := appctx.NewContextFromDelivery(appID, delivery)
 
 	err := processFunc(ctx, delivery.Body, delivery.ContentType)
 
 	if err != nil {
+
+		log.Errorf(ctx, "eventpubsub_rabbitmq", "error handling delivery, %s", err)
 
 		if delivery.Redelivered {
 			delivery.Nack(false, false)

@@ -43,16 +43,18 @@ func TestNewContext(t *testing.T) {
 func TestNewContextFromDelivery(t *testing.T) {
 
 	delivery := amqp.Delivery{
-		AppId: "AppID",
+		AppId: "FromAppID",
 		CorrelationId: "CorrelationID",
 	}
 
-	ctx := NewContextFromDelivery(delivery)
+	ctx := NewContextFromDelivery("AppID", delivery)
 
 	sessionID := ctx.Value(CorrelationIdHeader).(string)
 	appID := ctx.Value(AppIdHeader).(string)
+	fromAppID := ctx.Value(FromAppIdHeader).(string)
 
 	assert.Equal(t, "CorrelationID", sessionID)
 	assert.Equal(t, "AppID", appID)
+	assert.Equal(t, "FromAppID", fromAppID)
 }
 
