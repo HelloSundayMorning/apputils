@@ -22,10 +22,8 @@ import (
 type (
 	Initialize func(srv *AppServer) (err error)
 	CleanUp func(srv *AppServer)
-	RequestHandler func(srv *AppServer) (handler http.HandlerFunc, err error)
-	RequestWithDependenciesHandler func(srv *AppServer, dependencies ...interface{}) (handler http.HandlerFunc, err error)
-	EventHandler func(srv *AppServer) (handler eventpubsub.ProcessEvent, err error)
-	EventWithDependenciesHandler func(srv *AppServer, dependencies ...interface{}) (handler eventpubsub.ProcessEvent, err error)
+	RequestHandler func(srv *AppServer, dependencies ...interface{}) (handler http.HandlerFunc, err error)
+	EventHandler func(srv *AppServer, dependencies ...interface{}) (handler eventpubsub.ProcessEvent, err error)
 
 	AppServer struct {
 		*http.Server
@@ -66,24 +64,9 @@ func NewServerWithInitialization(appID string, port int, eventPubSub eventpubsub
 	return server
 }
 
-func (srv *AppServer) AddRoute(path, method string, handler RequestHandler) error {
+func (srv *AppServer) AddRoute(path, method string, handler RequestHandler, dependencies ...interface{}) error {
 
 	h, err := handler(srv)
-
-	if err != nil {
-		return err
-	}
-
-	srv.router().HandleFunc(path, srv.requestInterceptor(h)).Methods(method)
-
-	log.PrintfNoContext(srv.AppID, "server", "Added route %s %s for app %s", method, path, srv.AppID)
-
-	return nil
-}
-
-func (srv *AppServer) AddRouteWithDependencies(path, method string, handler RequestWithDependenciesHandler, dependencies ...interface{}) error {
-
-	h, err := handler(srv, dependencies...)
 
 	if err != nil {
 		return err
@@ -109,7 +92,7 @@ func (srv *AppServer) RegisterTopic(topic string) (err error) {
 	return nil
 }
 
-func (srv *AppServer) SubscribeToTopic(topic string, eventHandler EventHandler) (err error) {
+func (srv *AppServer) InitializeQueue(topic string) (err error) {
 
 	err = srv.pubSub.InitializeQueue(srv.AppID, topic)
 
@@ -117,13 +100,18 @@ func (srv *AppServer) SubscribeToTopic(topic string, eventHandler EventHandler) 
 		return err
 	}
 
-	h, err := eventHandler(srv)
+	return nil
+}
+
+func (srv *AppServer) SubscribeToTopicWithMaxMsg(topic string, eventHandler EventHandler, maxMessages int, dependencies ...interface{}) (err error) {
+
+	h, err := eventHandler(srv, dependencies...)
 
 	if err != nil {
 		return err
 	}
 
-	err = srv.pubSub.Subscribe(srv.AppID, topic, h)
+	err = srv.pubSub.SubscribeWithMaxMsg(srv.AppID, topic, h, maxMessages)
 
 	if err != nil {
 		return err
@@ -134,13 +122,7 @@ func (srv *AppServer) SubscribeToTopic(topic string, eventHandler EventHandler) 
 	return nil
 }
 
-func (srv *AppServer) SubscribeToTopicWithDependencies(topic string, eventHandler EventWithDependenciesHandler, dependencies ...interface{}) (err error) {
-
-	err = srv.pubSub.InitializeQueue(srv.AppID, topic)
-
-	if err != nil {
-		return err
-	}
+func (srv *AppServer) SubscribeToTopic(topic string, eventHandler EventHandler, dependencies ...interface{}) (err error) {
 
 	h, err := eventHandler(srv, dependencies...)
 

@@ -9,7 +9,7 @@ import (
 type (
 	AppEvent struct {
 		EventType string
-		Timestamp time.Time
+		Timestamp int64
 		Data      json.RawMessage
 	}
 )
@@ -18,7 +18,7 @@ func NewAppEvent(eventType string, data json.RawMessage) AppEvent {
 
 	return AppEvent{
 		EventType: eventType,
-		Timestamp: time.Now().UTC(),
+		Timestamp: time.Now().UTC().Unix(),
 		Data:      data,
 	}
 }
