@@ -300,12 +300,12 @@ func handleDelivery(appID string, delivery amqp.Delivery, processFunc ProcessEve
 }
 
 func formQueueName(appID, topic string) string {
-	return fmt.Sprintf("%s-%s", appID, topic)
+	return fmt.Sprintf("%s->%s", appID, topic)
 
 }
 
 func formDeadLetterName(appID, topic string) string {
-	return fmt.Sprintf("%s-%s.deadletter", appID, topic)
+	return fmt.Sprintf("%s->%s.deadletter", appID, topic)
 }
 
 // newFanOutQueue
