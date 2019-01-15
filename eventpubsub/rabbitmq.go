@@ -310,8 +310,9 @@ func formDeadLetterName(appID, topic string) string {
 
 // newFanOutQueue
 // creates:
-// - a fan out exchange named by the topic name
-// - a durable queue for the exchange with the same name
+// - a durable queue for a exchange
+//
+// If exchange is not found retry 3 times to find it with a interval of a 30 sec.
 //
 func newFanOutQueue(channel *amqp.Channel, exchangeName, queueName string, deadLetterExchange string) (queue amqp.Queue, err error) {
 
@@ -327,7 +328,7 @@ func newFanOutQueue(channel *amqp.Channel, exchangeName, queueName string, deadL
 	)
 
 	if err != nil {
-		return queue, err
+		return queue, fmt.Errorf("could not find exchange %s to bind queue %s, %s", exchangeName, queueName, err)
 	}
 
 	args := make(map[string]interface{})

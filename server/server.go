@@ -45,10 +45,10 @@ func NewServer(appID string, port int, eventPubSub eventpubsub.EventPubSub, appD
 	}
 
 	server := &AppServer{
-		Server:               httpServer,
-		AppID:                appID,
-		pubSub:               eventPubSub,
-		AppSqlDb:             appDb,
+		Server:   httpServer,
+		AppID:    appID,
+		pubSub:   eventPubSub,
+		AppSqlDb: appDb,
 	}
 
 	return server
@@ -94,10 +94,21 @@ func (srv *AppServer) RegisterTopic(topic string) (err error) {
 
 func (srv *AppServer) InitializeQueue(topic string) (err error) {
 
-	err = srv.pubSub.InitializeQueue(srv.AppID, topic)
+	for attempts := 1; attempts < 4; attempts++ {
+
+		err = srv.pubSub.InitializeQueue(srv.AppID, topic)
+		if err == nil {
+			break
+		}
+
+		log.PrintfNoContext(srv.AppID, "server", "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d", topic, attempts)
+
+		time.Sleep(time.Second * 30)
+
+	}
 
 	if err != nil {
-		return err
+		log.PrintfNoContext(srv.AppID, "server", "Failed to initialize queue for topic %s. %s", topic, err)
 	}
 
 	return nil
@@ -240,7 +251,7 @@ func (srv *AppServer) addVersionHandler() {
 		}
 
 		vJSON, _ := json.Marshal(&v{
-			AppID: srv.AppID,
+			AppID:   srv.AppID,
 			Version: os.Getenv("APP_VERSION"),
 		})
 
