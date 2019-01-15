@@ -66,6 +66,8 @@ func NewServerWithInitialization(appID string, port int, eventPubSub eventpubsub
 
 func (srv *AppServer) AddRoute(path, method string, handler RequestHandler, dependencies ...interface{}) error {
 
+	path = fmt.Sprintf("/%s%s", srv.AppID, path)
+
 	h, err := handler(srv)
 
 	if err != nil {
@@ -240,7 +242,7 @@ func (srv *AppServer) router() *mux.Router {
 
 func (srv *AppServer) addVersionHandler() {
 
-	path := "/version"
+	path := fmt.Sprintf("/%s/version", srv.AppID)
 	method := "GET"
 
 	srv.router().HandleFunc(path, srv.requestInterceptor(func(writer http.ResponseWriter, request *http.Request) {
