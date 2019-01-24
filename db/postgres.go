@@ -32,6 +32,24 @@ func NewPostgresDB(host, user, pw, dbName string) (pgDb *PostgresDB, err error) 
 
 }
 
+func NewPostgresDBWithPort(host, user, pw, dbName, port string) (pgDb *PostgresDB, err error) {
+
+	dataSource := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", host, user, pw, dbName, port)
+
+	db, err := sql.Open("postgres", dataSource)
+
+	if err != nil {
+		return pgDb, err
+	}
+
+	pgDb = &PostgresDB{
+		DB: db,
+	}
+
+	return pgDb, nil
+
+}
+
 func (pDb *PostgresDB) GetDB() (*sql.DB) {
 	return pDb.DB
 }
