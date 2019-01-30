@@ -111,6 +111,7 @@ func (srv *AppServer) InitializeQueue(topic string) (err error) {
 
 	if err != nil {
 		log.PrintfNoContext(srv.AppID, "server", "Failed to initialize queue for topic %s. %s", topic, err)
+		return err
 	}
 
 	return nil

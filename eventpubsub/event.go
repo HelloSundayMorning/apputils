@@ -23,6 +23,15 @@ func NewAppEvent(eventType string, data json.RawMessage) AppEvent {
 	}
 }
 
+func NewAppEventWithTimestamp(eventType string, data json.RawMessage, timestamp int64) AppEvent {
+
+	return AppEvent{
+		EventType: eventType,
+		Timestamp: timestamp,
+		Data:      data,
+	}
+}
+
 func NewAppEventFromJSON(event []byte) (appEvent AppEvent, err error) {
 
 	err = json.Unmarshal(event, &appEvent)
