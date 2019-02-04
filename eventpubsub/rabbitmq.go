@@ -1,12 +1,12 @@
 package eventpubsub
 
 import (
-	"context"
 	"fmt"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/satori/go.uuid"
 	"github.com/streadway/amqp"
+	"golang.org/x/net/context"
 )
 
 type (
