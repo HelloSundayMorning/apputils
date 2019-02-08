@@ -18,7 +18,7 @@ func NewAppEvent(eventType string, data json.RawMessage) AppEvent {
 
 	return AppEvent{
 		EventType: eventType,
-		Timestamp: time.Now().UTC().UnixNano(),
+		Timestamp: time.Now().UTC().Unix(),
 		Data:      data,
 	}
 }
