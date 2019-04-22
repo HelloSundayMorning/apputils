@@ -203,7 +203,11 @@ func (srv *AppServer) prepareShutdown() {
 
 	log.PrintfNoContext(srv.AppID, component, "Cleaning up resources")
 
-	srv.pubSub.CleanUp()
+	err := srv.pubSub.CleanUp()
+
+	if err != nil {
+		log.ErrorfNoContext(srv.AppID, component, "Error cleaning up pubsub ,%s", err)
+	}
 
 	if srv.cleanupFunc != nil {
 		srv.cleanupFunc(srv)
