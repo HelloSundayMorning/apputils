@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/HelloSundayMorning/apputils/appctx"
-	"github.com/HelloSundayMorning/apputils/db"
 	"github.com/HelloSundayMorning/apputils/eventpubsub"
 	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/gorilla/mux"
@@ -22,8 +21,6 @@ import (
 type (
 	Initialize func(srv *AppServer) (err error)
 	CleanUp func(srv *AppServer)
-	RequestHandler func(srv *AppServer, dependencies ...interface{}) (handler http.HandlerFunc, err error)
-	EventHandler func(srv *AppServer, dependencies ...interface{}) (handler eventpubsub.ProcessEvent, err error)
 
 	AppServer struct {
 		*http.Server
@@ -31,11 +28,14 @@ type (
 		initializeFunc Initialize
 		cleanupFunc    CleanUp
 		pubSub         eventpubsub.EventPubSub
-		db.AppSqlDb
 	}
 )
 
-func NewServer(appID string, port int, eventPubSub eventpubsub.EventPubSub, appDb db.AppSqlDb) *AppServer {
+const (
+	component = "server"
+)
+
+func NewServer(appID string, port int, eventPubSub eventpubsub.EventPubSub) *AppServer {
 
 	router := mux.NewRouter()
 
@@ -45,18 +45,17 @@ func NewServer(appID string, port int, eventPubSub eventpubsub.EventPubSub, appD
 	}
 
 	server := &AppServer{
-		Server:   httpServer,
-		AppID:    appID,
-		pubSub:   eventPubSub,
-		AppSqlDb: appDb,
+		Server: httpServer,
+		AppID:  appID,
+		pubSub: eventPubSub,
 	}
 
 	return server
 }
 
-func NewServerWithInitialization(appID string, port int, eventPubSub eventpubsub.EventPubSub, appDb db.AppSqlDb, initializeFunc Initialize, cleanupFunc CleanUp) *AppServer {
+func NewServerWithInitialization(appID string, port int, eventPubSub eventpubsub.EventPubSub, initializeFunc Initialize, cleanupFunc CleanUp) *AppServer {
 
-	server := NewServer(appID, port, eventPubSub, appDb)
+	server := NewServer(appID, port, eventPubSub)
 
 	server.initializeFunc = initializeFunc
 	server.cleanupFunc = cleanupFunc
@@ -64,19 +63,13 @@ func NewServerWithInitialization(appID string, port int, eventPubSub eventpubsub
 	return server
 }
 
-func (srv *AppServer) AddRoute(path, method string, handler RequestHandler, dependencies ...interface{}) error {
+func (srv *AppServer) AddRoute(path, method string, handler http.HandlerFunc) error {
 
 	path = fmt.Sprintf("/%s%s", srv.AppID, path)
 
-	h, err := handler(srv)
+	srv.router().HandleFunc(path, srv.requestInterceptor(handler)).Methods(method)
 
-	if err != nil {
-		return err
-	}
-
-	srv.router().HandleFunc(path, srv.requestInterceptor(h)).Methods(method)
-
-	log.PrintfNoContext(srv.AppID, "server", "Added route %s %s for app %s", method, path, srv.AppID)
+	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
 
 	return nil
 }
@@ -89,7 +82,7 @@ func (srv *AppServer) RegisterTopic(topic string) (err error) {
 		return err
 	}
 
-	log.PrintfNoContext(srv.AppID, "server", "Registered topic %s for app %s", topic, srv.AppID)
+	log.PrintfNoContext(srv.AppID, component, "Registered topic %s for app %s", topic, srv.AppID)
 
 	return nil
 }
@@ -103,54 +96,42 @@ func (srv *AppServer) InitializeQueue(topic string) (err error) {
 			break
 		}
 
-		log.PrintfNoContext(srv.AppID, "server", "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d", topic, attempts)
+		log.PrintfNoContext(srv.AppID, component, "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d", topic, attempts)
 
 		time.Sleep(time.Second * 30)
 
 	}
 
 	if err != nil {
-		log.PrintfNoContext(srv.AppID, "server", "Failed to initialize queue for topic %s. %s", topic, err)
+		log.PrintfNoContext(srv.AppID, component, "Failed to initialize queue for topic %s. %s", topic, err)
 		return err
 	}
 
 	return nil
 }
 
-func (srv *AppServer) SubscribeToTopicWithMaxMsg(topic string, eventHandler EventHandler, maxMessages int, dependencies ...interface{}) (err error) {
+func (srv *AppServer) SubscribeToTopicWithMaxMsg(topic string, eventHandler eventpubsub.ProcessEvent, maxMessages int) (err error) {
 
-	h, err := eventHandler(srv, dependencies...)
-
-	if err != nil {
-		return err
-	}
-
-	err = srv.pubSub.SubscribeWithMaxMsg(srv.AppID, topic, h, maxMessages)
+	err = srv.pubSub.SubscribeWithMaxMsg(srv.AppID, topic, eventHandler, maxMessages)
 
 	if err != nil {
 		return err
 	}
 
-	log.PrintfNoContext(srv.AppID, "server", "App %s Subscribed to topic %s", srv.AppID, topic)
+	log.PrintfNoContext(srv.AppID, component, "App %s Subscribed to topic %s", srv.AppID, topic)
 
 	return nil
 }
 
-func (srv *AppServer) SubscribeToTopic(topic string, eventHandler EventHandler, dependencies ...interface{}) (err error) {
+func (srv *AppServer) SubscribeToTopic(topic string, eventHandler eventpubsub.ProcessEvent) (err error) {
 
-	h, err := eventHandler(srv, dependencies...)
-
-	if err != nil {
-		return err
-	}
-
-	err = srv.pubSub.Subscribe(srv.AppID, topic, h)
+	err = srv.pubSub.Subscribe(srv.AppID, topic, eventHandler)
 
 	if err != nil {
 		return err
 	}
 
-	log.PrintfNoContext(srv.AppID, "server", "App %s Subscribed to topic %s", srv.AppID, topic)
+	log.PrintfNoContext(srv.AppID, component, "App %s Subscribed to topic %s", srv.AppID, topic)
 
 	return nil
 }
@@ -187,7 +168,7 @@ func (srv *AppServer) Start() {
 	signal.Notify(sigc, syscall.SIGINT)  // Handling Ctrl + C
 	signal.Notify(sigc, syscall.SIGTERM) // Handling Docker stop
 
-	log.PrintfNoContext(srv.AppID, "server", "Initializing resources")
+	log.PrintfNoContext(srv.AppID, component, "Initializing resources")
 
 	srv.addVersionHandler()
 
@@ -196,19 +177,19 @@ func (srv *AppServer) Start() {
 		err := srv.initializeFunc(srv)
 
 		if err != nil {
-			log.FatalfNoContext(srv.AppID, "server", "Failed to initialize resources, %s", err)
+			log.FatalfNoContext(srv.AppID, component, "Failed to initialize resources, %s", err)
 		}
 	}
 
-	log.PrintfNoContext(srv.AppID, "server", "Starting app server %s", srv.AppID)
+	log.PrintfNoContext(srv.AppID, component, "Starting app server %s", srv.AppID)
 
 	go func() {
-		log.PrintfNoContext(srv.AppID, "server", "Listening on port %s. Ctrl+C to stop", srv.Addr)
+		log.PrintfNoContext(srv.AppID, component, "Listening on port %s. Ctrl+C to stop", srv.Addr)
 
 		err := srv.ListenAndServe()
 
 		if err != http.ErrServerClosed {
-			log.FatalfNoContext(srv.AppID, "server", "Failed to start server, %s", err)
+			log.FatalfNoContext(srv.AppID, component, "Failed to start server, %s", err)
 		}
 	}()
 
@@ -220,7 +201,7 @@ func (srv *AppServer) Start() {
 
 func (srv *AppServer) prepareShutdown() {
 
-	log.PrintfNoContext(srv.AppID, "server", "Cleaning up resources")
+	log.PrintfNoContext(srv.AppID, component, "Cleaning up resources")
 
 	srv.pubSub.CleanUp()
 
@@ -228,13 +209,17 @@ func (srv *AppServer) prepareShutdown() {
 		srv.cleanupFunc(srv)
 	}
 
-	log.PrintfNoContext(srv.AppID, "server", "Shutting down app server %s", srv.AppID)
+	log.PrintfNoContext(srv.AppID, component, "Shutting down app server %s", srv.AppID)
 
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
-	srv.Shutdown(ctx)
+	err := srv.Shutdown(ctx)
 
-	log.PrintfNoContext(srv.AppID, "server", "App server %s gracefully stopped", srv.AppID)
+	if err != nil {
+		log.FatalfNoContext(srv.AppID, component, "Error shutting down server, %s", err)
+	} else {
+		log.PrintfNoContext(srv.AppID, component, "App server %s gracefully stopped", srv.AppID)
+	}
 }
 
 func (srv *AppServer) router() *mux.Router {
@@ -248,6 +233,8 @@ func (srv *AppServer) addVersionHandler() {
 
 	srv.router().HandleFunc(path, srv.requestInterceptor(func(writer http.ResponseWriter, request *http.Request) {
 
+		ctx := appctx.NewContext(request)
+
 		type v struct {
 			AppID   string
 			Version string
@@ -259,11 +246,19 @@ func (srv *AppServer) addVersionHandler() {
 		})
 
 		writer.Header().Set("Content-Type", "application/json")
-		writer.Write(vJSON)
+
+		_, err := writer.Write(vJSON)
+
+		if err != nil {
+			log.Errorf(ctx, component, "Error serializing JSON for /version call, %s", err)
+			writer.WriteHeader(http.StatusInternalServerError)
+		}
+
+		return
 
 	})).Methods(method)
 
-	log.PrintfNoContext(srv.AppID, "server", "Added route %s %s for app %s", method, path, srv.AppID)
+	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
 }
 
 func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc {
@@ -282,9 +277,9 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 		ctx := appctx.NewContext(r)
 
 		if previousAppID != "" {
-			log.Printf(ctx, "server", "Request %s %s from app %s", r.Method, r.RequestURI, previousAppID)
+			log.Printf(ctx, component, "Request %s %s from app %s", r.Method, r.RequestURI, previousAppID)
 		} else {
-			log.Printf(ctx, "server", "Request %s %s", r.Method, r.RequestURI)
+			log.Printf(ctx, component, "Request %s %s", r.Method, r.RequestURI)
 		}
 
 		next.ServeHTTP(w, r)

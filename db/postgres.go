@@ -6,9 +6,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-
 type (
-
 	PostgresDB struct {
 		*sql.DB
 	}
@@ -50,6 +48,6 @@ func NewPostgresDBWithPort(host, user, pw, dbName, port string) (pgDb *PostgresD
 
 }
 
-func (pDb *PostgresDB) GetDB() (*sql.DB) {
+func (pDb *PostgresDB) GetDB() *sql.DB {
 	return pDb.DB
 }

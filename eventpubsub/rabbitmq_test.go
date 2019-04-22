@@ -42,8 +42,8 @@ func TestRabbitMq_RegisterTopic(t *testing.T) {
 func TestRabbitMq_InitializeQueue(t *testing.T) {
 
 	const topic, appID = "testInitializeQueue", "testApp"
-	expQueueName := fmt.Sprintf("%s-%s", appID, topic)
-	expDeadQueueName := fmt.Sprintf("%s-%s.deadletter", appID, topic)
+	expQueueName := fmt.Sprintf("%s->%s", appID, topic)
+	expDeadQueueName := fmt.Sprintf("%s->%s.deadletter", appID, topic)
 
 	rb, _ := NewRabbitMq("rabbitmq", "rabbitmq", "localhost")
 
@@ -102,8 +102,8 @@ func TestRabbitMq_Publish(t *testing.T) {
 func TestRabbitMq_Subscribe(t *testing.T) {
 
 	const topic, appID, event = "testSubscribe", "testApp", "testEvent"
-	expQueueName := fmt.Sprintf("%s-%s", appID, topic)
-	expDeadQueueName := fmt.Sprintf("%s-%s.deadletter", appID, topic)
+	expQueueName := fmt.Sprintf("%s->%s", appID, topic)
+	expDeadQueueName := fmt.Sprintf("%s->%s.deadletter", appID, topic)
 	rb, _ := NewRabbitMq("rabbitmq", "rabbitmq", "localhost")
 
 	ch, _ := rb.MqConnection.Channel()
@@ -117,7 +117,7 @@ func TestRabbitMq_Subscribe(t *testing.T) {
 	})
 
 	assert.NotNil(t, err)
-	assert.Equal(t, "Exception (404) Reason: \"NOT_FOUND - no queue 'testApp-testSubscribe' in vhost '/'\"", err.Error())
+	assert.Equal(t, "Exception (404) Reason: \"NOT_FOUND - no queue 'testApp->testSubscribe' in vhost '/'\"", err.Error())
 
 	rb.RegisterTopic(appID, topic)
 	rb.InitializeQueue(appID, topic)

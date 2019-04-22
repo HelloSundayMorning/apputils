@@ -39,8 +39,8 @@ func NewSeqIDFromUuid(ID string) uint {
 
 func NewUuid() string {
 
-	uuid, _ := uuid.NewV4()
+	newUuid, _ := uuid.NewV4()
 
-	return uuid.String()
+	return newUuid.String()
 
 }

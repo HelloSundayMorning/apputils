@@ -18,6 +18,10 @@ type (
 	}
 )
 
+const (
+	component = "eventpubsub_rabbitmq"
+)
+
 func NewRabbitMq(user, pw, host string) (handler *RabbitMq, err error) {
 
 	url := fmt.Sprintf("amqp://%s:%s@%s", user, pw, host)
@@ -38,20 +42,24 @@ func NewRabbitMq(user, pw, host string) (handler *RabbitMq, err error) {
 
 }
 
-func (rabbit *RabbitMq) CleanUp() {
+func (rabbit *RabbitMq) CleanUp() error {
 
 	for _, subChannel := range rabbit.subscriptionChannels {
 		close(subChannel)
 	}
 
 	rabbit.subscriptionChannels = make(map[string]chan bool, 0)
-
-	if rabbit.publishChannel != nil {
-		rabbit.publishChannel.Close()
-	}
-
 	rabbit.registeredTopic = make(map[string]bool)
 
+	if rabbit.publishChannel != nil {
+		err := rabbit.publishChannel.Close()
+
+		if err != nil {
+			return fmt.Errorf("error closing publich channel while cleaning up rabbitmq connection, %s", err)
+		}
+	}
+
+	return nil
 }
 
 // RegisterTopic Should be called in the initialization to create an exchange
@@ -60,11 +68,17 @@ func (rabbit *RabbitMq) RegisterTopic(appID, topic string) (err error) {
 
 	channel, err := rabbit.MqConnection.Channel()
 
-	defer channel.Close()
-
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		err := channel.Close()
+
+		if err != nil {
+			log.ErrorfNoContext(appID, component, "Error closing channel while registering topic, %s", err)
+		}
+	}()
 
 	// topic exchange
 	err = channel.ExchangeDeclare(
@@ -99,11 +113,17 @@ func (rabbit *RabbitMq) InitializeQueue(appID, topic string) (err error) {
 
 	channel, err := rabbit.MqConnection.Channel()
 
-	defer channel.Close()
-
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		err := channel.Close()
+
+		if err != nil {
+			log.ErrorfNoContext(appID, component, "Error closing channel while initializing queue, %s", err)
+		}
+	}()
 
 	appQueueName := formQueueName(appID, topic)
 	deadLetterName := formDeadLetterName(appID, topic)
@@ -248,7 +268,11 @@ func (rabbit *RabbitMq) SubscribeWithMaxMsg(appID, topic string, processFunc Pro
 
 			case <-rabbit.subscriptionChannels[topic]:
 
-				channel.Close()
+				err := channel.Close()
+
+				if err != nil {
+					log.ErrorfNoContext(appID, component, "Error closing channel while ending subscription, %s", err)
+				}
 
 				return
 
@@ -285,18 +309,28 @@ func handleDelivery(appID string, delivery amqp.Delivery, processFunc ProcessEve
 
 	if err != nil {
 
-		log.Errorf(ctx, "eventpubsub_rabbitmq", "error handling delivery, %s", err)
+		log.Errorf(ctx, component, "Error handling delivery, %s", err)
 
 		if delivery.Redelivered {
-			delivery.Nack(false, false)
+			log.Printf(ctx, component, "2nd attempt failure. Dead-letter delivery, %s", err)
+			err = delivery.Nack(false, false)
 		} else {
-			delivery.Nack(false, true)
+			log.Printf(ctx, component, "1st attempt failure. Re-queue delivery, %s", err)
+			err = delivery.Nack(false, true)
+		}
+
+		if err != nil {
+			log.Errorf(ctx, component, "Error while Nack delivery, %s", err)
 		}
 
 		return
 	}
 
-	delivery.Ack(false)
+	err = delivery.Ack(false)
+
+	if err != nil {
+		log.Errorf(ctx, component, "Error while Ack delivery, %s", err)
+	}
 }
 
 func formQueueName(appID, topic string) string {
