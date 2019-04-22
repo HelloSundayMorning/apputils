@@ -15,7 +15,7 @@ type (
 		Subscribe(appID, topic string, processFunc ProcessEvent) (err error)
 		SubscribeWithMaxMsg(appID, topic string, processFunc ProcessEvent, maxMessages int) (err error)
 		UnSubscribe(topic string)
-		CleanUp()
+		CleanUp() (err error)
 	}
 
 )
