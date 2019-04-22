@@ -217,7 +217,7 @@ func (srv *AppServer) prepareShutdown() {
 
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
-	err := srv.Shutdown(ctx)
+	err = srv.Shutdown(ctx)
 
 	if err != nil {
 		log.FatalfNoContext(srv.AppID, component, "Error shutting down server, %s", err)
