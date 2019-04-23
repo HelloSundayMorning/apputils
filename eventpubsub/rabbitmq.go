@@ -189,7 +189,7 @@ func (rabbit *RabbitMq) declareQueue(topic string) (err error) {
 
 func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event []byte, contentType string) (err error) {
 
-	appID := ctx.Value(appctx.AppIdHeader).(string)
+	appID := ctx.Value(appctx.AppIdHeader).(app.ApplicationID)
 	correlationID := ctx.Value(appctx.CorrelationIdHeader).(string)
 
 	if !rabbit.registeredTopic[topic] {
@@ -239,7 +239,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 			MessageId:     msgID.String(),
 			DeliveryMode:  uint8(2),
 			CorrelationId: correlationID,
-			AppId:         appID,
+			AppId:         string(appID),
 		})
 
 	if err != nil {

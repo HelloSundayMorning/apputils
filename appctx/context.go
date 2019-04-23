@@ -73,7 +73,7 @@ func NewContext(r *http.Request) (ctx context.Context) {
 
 }
 
-func NewContextFromValues(appID, correlationID string) (ctx context.Context) {
+func NewContextFromValues(appID app.ApplicationID, correlationID string) (ctx context.Context) {
 
 	store := make(map[string]interface{})
 
