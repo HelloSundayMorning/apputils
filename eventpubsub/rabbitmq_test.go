@@ -11,9 +11,9 @@ import (
 func TestRabbitMq_RegisterTopic(t *testing.T) {
 
 	const topic = "testRegisterTopic"
-	rb, _ := NewRabbitMq("rabbitmq", "rabbitmq", "localhost")
+	rb, _ := NewRabbitMq("testApp","rabbitmq", "rabbitmq", "localhost")
 
-	err := rb.RegisterTopic("testApp", topic)
+	err := rb.RegisterTopic(topic)
 
 	assert.Nil(t, err)
 	assert.True(t, rb.registeredTopic[topic])
@@ -45,11 +45,11 @@ func TestRabbitMq_InitializeQueue(t *testing.T) {
 	expQueueName := fmt.Sprintf("%s->%s", appID, topic)
 	expDeadQueueName := fmt.Sprintf("%s->%s.deadletter", appID, topic)
 
-	rb, _ := NewRabbitMq("rabbitmq", "rabbitmq", "localhost")
+	rb, _ := NewRabbitMq(appID,"rabbitmq", "rabbitmq", "localhost")
 
-	rb.RegisterTopic(appID, topic)
+	rb.RegisterTopic(topic)
 
-	err := rb.InitializeQueue(appID, topic)
+	err := rb.InitializeQueue(topic)
 
 	assert.Nil(t, err)
 
@@ -76,18 +76,18 @@ func TestRabbitMq_InitializeQueue(t *testing.T) {
 func TestRabbitMq_Publish(t *testing.T) {
 
 	const topic, appID, event = "testPublish", "testApp", "testEvent"
-	rb, _ := NewRabbitMq("rabbitmq", "rabbitmq", "localhost")
+	rb, _ := NewRabbitMq(appID, "rabbitmq", "rabbitmq", "localhost")
 
 	ctx := appctx.NewContextFromValues(appID, "")
 
-	err := rb.Publish(ctx, topic, []byte(event), "text/plain")
+	err := rb.PublishToTopic(ctx, topic, []byte(event), "text/plain")
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "app testApp is not registered for topic testPublish", err.Error())
 
-	rb.RegisterTopic("testApp", topic)
+	rb.RegisterTopic(topic)
 
-	err = rb.Publish(ctx, topic, []byte(event), "text/plain")
+	err = rb.PublishToTopic(ctx, topic, []byte(event), "text/plain")
 
 	assert.Nil(t, err)
 
@@ -104,7 +104,7 @@ func TestRabbitMq_Subscribe(t *testing.T) {
 	const topic, appID, event = "testSubscribe", "testApp", "testEvent"
 	expQueueName := fmt.Sprintf("%s->%s", appID, topic)
 	expDeadQueueName := fmt.Sprintf("%s->%s.deadletter", appID, topic)
-	rb, _ := NewRabbitMq("rabbitmq", "rabbitmq", "localhost")
+	rb, _ := NewRabbitMq(appID,"rabbitmq", "rabbitmq", "localhost")
 
 	ch, _ := rb.MqConnection.Channel()
 	defer ch.Close()
@@ -112,19 +112,19 @@ func TestRabbitMq_Subscribe(t *testing.T) {
 	ctx := appctx.NewContextFromValues(appID, "")
 
 
-	err := rb.Subscribe(appID, topic, func(ctx context.Context, event []byte, contentType string) error {
+	err := rb.SubscribeToTopic(topic, func(ctx context.Context, event []byte, contentType string) error {
 		return nil
 	})
 
 	assert.NotNil(t, err)
 	assert.Equal(t, "Exception (404) Reason: \"NOT_FOUND - no queue 'testApp->testSubscribe' in vhost '/'\"", err.Error())
 
-	rb.RegisterTopic(appID, topic)
-	rb.InitializeQueue(appID, topic)
+	rb.RegisterTopic(topic)
+	rb.InitializeQueue(topic)
 
 	rChan := make(chan []byte)
 
-	err = rb.Subscribe(appID, topic, func(ctx context.Context, event []byte, contentType string) error {
+	err = rb.SubscribeToTopic(topic, func(ctx context.Context, event []byte, contentType string) error {
 
 		rChan <- event
 
@@ -133,7 +133,7 @@ func TestRabbitMq_Subscribe(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	rb.Publish(ctx, topic, []byte(event), "")
+	rb.PublishToTopic(ctx, topic, []byte(event), "")
 
 	result := <- rChan
 

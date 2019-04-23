@@ -2,15 +2,18 @@ package eventpubsub
 
 import (
 	"fmt"
+	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/satori/go.uuid"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
+	"time"
 )
 
 type (
 	RabbitMq struct {
+		AppID                app.ApplicationID
 		MqConnection         *amqp.Connection
 		registeredTopic      map[string]bool
 		publishChannel       *amqp.Channel
@@ -22,7 +25,7 @@ const (
 	component = "eventpubsub_rabbitmq"
 )
 
-func NewRabbitMq(user, pw, host string) (handler *RabbitMq, err error) {
+func NewRabbitMq(appID app.ApplicationID, user, pw, host string) (handler *RabbitMq, err error) {
 
 	url := fmt.Sprintf("amqp://%s:%s@%s", user, pw, host)
 
@@ -33,6 +36,7 @@ func NewRabbitMq(user, pw, host string) (handler *RabbitMq, err error) {
 	}
 
 	handler = &RabbitMq{
+		AppID:                appID,
 		MqConnection:         mqConnection,
 		registeredTopic:      make(map[string]bool),
 		subscriptionChannels: make(map[string]chan bool),
@@ -55,7 +59,7 @@ func (rabbit *RabbitMq) CleanUp() error {
 		err := rabbit.publishChannel.Close()
 
 		if err != nil {
-			return fmt.Errorf("error closing publich channel while cleaning up rabbitmq connection, %s", err)
+			return fmt.Errorf("error closing public channel while cleaning up rabbitmq connection, %s", err)
 		}
 	}
 
@@ -64,7 +68,7 @@ func (rabbit *RabbitMq) CleanUp() error {
 
 // RegisterTopic Should be called in the initialization to create an exchange
 // If the exchange exists it's ignored
-func (rabbit *RabbitMq) RegisterTopic(appID, topic string) (err error) {
+func (rabbit *RabbitMq) RegisterTopic(topic string) (err error) {
 
 	channel, err := rabbit.MqConnection.Channel()
 
@@ -76,7 +80,7 @@ func (rabbit *RabbitMq) RegisterTopic(appID, topic string) (err error) {
 		err := channel.Close()
 
 		if err != nil {
-			log.ErrorfNoContext(appID, component, "Error closing channel while registering topic, %s", err)
+			log.ErrorfNoContext(rabbit.AppID, component, "Error closing channel while registering topic, %s", err)
 		}
 	}()
 
@@ -97,6 +101,31 @@ func (rabbit *RabbitMq) RegisterTopic(appID, topic string) (err error) {
 
 	rabbit.registeredTopic[topic] = true
 
+	log.PrintfNoContext(rabbit.AppID, component, "Registered topic %s for app %s", topic, rabbit.AppID)
+
+	return nil
+}
+
+func (rabbit *RabbitMq) InitializeQueue(topic string) (err error) {
+
+	for attempts := 1; attempts < 4; attempts++ {
+
+		err = rabbit.declareQueue(topic)
+		if err == nil {
+			break
+		}
+
+		log.PrintfNoContext(rabbit.AppID, component, "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d", topic, attempts)
+
+		time.Sleep(time.Second * 30)
+
+	}
+
+	if err != nil {
+		log.PrintfNoContext(rabbit.AppID, component, "Failed to initialize queue for topic %s. %s", topic, err)
+		return err
+	}
+
 	return nil
 }
 
@@ -109,7 +138,7 @@ func (rabbit *RabbitMq) RegisterTopic(appID, topic string) (err error) {
 //
 // - appID : unique name for the application that will subscribe to a topic
 // - topic : topic name
-func (rabbit *RabbitMq) InitializeQueue(appID, topic string) (err error) {
+func (rabbit *RabbitMq) declareQueue(topic string) (err error) {
 
 	channel, err := rabbit.MqConnection.Channel()
 
@@ -121,12 +150,12 @@ func (rabbit *RabbitMq) InitializeQueue(appID, topic string) (err error) {
 		err := channel.Close()
 
 		if err != nil {
-			log.ErrorfNoContext(appID, component, "Error closing channel while initializing queue, %s", err)
+			log.ErrorfNoContext(rabbit.AppID, component, "Error closing channel while initializing queue, %s", err)
 		}
 	}()
 
-	appQueueName := formQueueName(appID, topic)
-	deadLetterName := formDeadLetterName(appID, topic)
+	appQueueName := formQueueName(rabbit.AppID, topic)
+	deadLetterName := formDeadLetterName(rabbit.AppID, topic)
 
 	// topic exchange
 	err = channel.ExchangeDeclare(
@@ -158,7 +187,7 @@ func (rabbit *RabbitMq) InitializeQueue(appID, topic string) (err error) {
 	return nil
 }
 
-func (rabbit *RabbitMq) Publish(ctx context.Context, topic string, event []byte, contentType string) (err error) {
+func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event []byte, contentType string) (err error) {
 
 	appID := ctx.Value(appctx.AppIdHeader).(string)
 	correlationID := ctx.Value(appctx.CorrelationIdHeader).(string)
@@ -220,14 +249,14 @@ func (rabbit *RabbitMq) Publish(ctx context.Context, topic string, event []byte,
 	return nil
 }
 
-func (rabbit *RabbitMq) Subscribe(appID, topic string, processFunc ProcessEvent) (err error) {
+func (rabbit *RabbitMq) SubscribeToTopic(topic string, processFunc ProcessEvent) (err error) {
 
-	return rabbit.SubscribeWithMaxMsg(appID, topic, processFunc, 0)
+	return rabbit.SubscribeToTopicWithMaxMsg(topic, processFunc, 0)
 }
 
-func (rabbit *RabbitMq) SubscribeWithMaxMsg(appID, topic string, processFunc ProcessEvent, maxMessages int) (err error) {
+func (rabbit *RabbitMq) SubscribeToTopicWithMaxMsg(topic string, processFunc ProcessEvent, maxMessages int) (err error) {
 
-	appQueueName := formQueueName(appID, topic)
+	appQueueName := formQueueName(rabbit.AppID, topic)
 
 	channel, err := rabbit.MqConnection.Channel()
 
@@ -264,14 +293,14 @@ func (rabbit *RabbitMq) SubscribeWithMaxMsg(appID, topic string, processFunc Pro
 			select {
 			case delivery := <-deliveries:
 
-				handleDelivery(appID, delivery, processFunc)
+				rabbit.handleDelivery(delivery, processFunc)
 
 			case <-rabbit.subscriptionChannels[topic]:
 
 				err := channel.Close()
 
 				if err != nil {
-					log.ErrorfNoContext(appID, component, "Error closing channel while ending subscription, %s", err)
+					log.ErrorfNoContext(rabbit.AppID, component, "Error closing channel while ending subscription, %s", err)
 				}
 
 				return
@@ -279,6 +308,8 @@ func (rabbit *RabbitMq) SubscribeWithMaxMsg(appID, topic string, processFunc Pro
 			}
 		}
 	}()
+
+	log.PrintfNoContext(rabbit.AppID, component, "App %s Subscribed to topic %s", rabbit.AppID, topic)
 
 	return nil
 }
@@ -296,14 +327,14 @@ func (rabbit *RabbitMq) UnSubscribe(topic string) {
 // handleDelivery
 // Call process function. If it fails requeue the first time.
 // the second fail will send it to dead letter
-func handleDelivery(appID string, delivery amqp.Delivery, processFunc ProcessEvent) {
+func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc ProcessEvent) {
 
 	if delivery.CorrelationId == "" {
 		id, _ := uuid.NewV4()
 		delivery.CorrelationId = id.String()
 	}
 
-	ctx := appctx.NewContextFromDelivery(appID, delivery)
+	ctx := appctx.NewContextFromDelivery(rabbit.AppID, delivery)
 
 	err := processFunc(ctx, delivery.Body, delivery.ContentType)
 
@@ -333,12 +364,12 @@ func handleDelivery(appID string, delivery amqp.Delivery, processFunc ProcessEve
 	}
 }
 
-func formQueueName(appID, topic string) string {
+func formQueueName(appID app.ApplicationID, topic string) string {
 	return fmt.Sprintf("%s->%s", appID, topic)
 
 }
 
-func formDeadLetterName(appID, topic string) string {
+func formDeadLetterName(appID app.ApplicationID, topic string) string {
 	return fmt.Sprintf("%s->%s.deadletter", appID, topic)
 }
 

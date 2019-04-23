@@ -3,8 +3,8 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
-	"github.com/HelloSundayMorning/apputils/eventpubsub"
 	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/gorilla/mux"
 	"github.com/satori/go.uuid"
@@ -20,14 +20,13 @@ import (
 
 type (
 	Initialize func(srv *AppServer) (err error)
-	CleanUp func(srv *AppServer)
+	CleanUp func(srv *AppServer) (err error)
 
 	AppServer struct {
 		*http.Server
-		AppID          string
+		AppID          app.ApplicationID
 		initializeFunc Initialize
 		cleanupFunc    CleanUp
-		pubSub         eventpubsub.EventPubSub
 	}
 )
 
@@ -35,7 +34,7 @@ const (
 	component = "server"
 )
 
-func NewServer(appID string, port int, eventPubSub eventpubsub.EventPubSub) *AppServer {
+func NewServer(appID app.ApplicationID, port int) *AppServer {
 
 	router := mux.NewRouter()
 
@@ -47,15 +46,14 @@ func NewServer(appID string, port int, eventPubSub eventpubsub.EventPubSub) *App
 	server := &AppServer{
 		Server: httpServer,
 		AppID:  appID,
-		pubSub: eventPubSub,
 	}
 
 	return server
 }
 
-func NewServerWithInitialization(appID string, port int, eventPubSub eventpubsub.EventPubSub, initializeFunc Initialize, cleanupFunc CleanUp) *AppServer {
+func NewServerWithInitialization(appID app.ApplicationID, port int, initializeFunc Initialize, cleanupFunc CleanUp) *AppServer {
 
-	server := NewServer(appID, port, eventPubSub)
+	server := NewServer(appID, port)
 
 	server.initializeFunc = initializeFunc
 	server.cleanupFunc = cleanupFunc
@@ -70,79 +68,6 @@ func (srv *AppServer) AddRoute(path, method string, handler http.HandlerFunc) er
 	srv.router().HandleFunc(path, srv.requestInterceptor(handler)).Methods(method)
 
 	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
-
-	return nil
-}
-
-func (srv *AppServer) RegisterTopic(topic string) (err error) {
-
-	err = srv.pubSub.RegisterTopic(srv.AppID, topic)
-
-	if err != nil {
-		return err
-	}
-
-	log.PrintfNoContext(srv.AppID, component, "Registered topic %s for app %s", topic, srv.AppID)
-
-	return nil
-}
-
-func (srv *AppServer) InitializeQueue(topic string) (err error) {
-
-	for attempts := 1; attempts < 4; attempts++ {
-
-		err = srv.pubSub.InitializeQueue(srv.AppID, topic)
-		if err == nil {
-			break
-		}
-
-		log.PrintfNoContext(srv.AppID, component, "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d", topic, attempts)
-
-		time.Sleep(time.Second * 30)
-
-	}
-
-	if err != nil {
-		log.PrintfNoContext(srv.AppID, component, "Failed to initialize queue for topic %s. %s", topic, err)
-		return err
-	}
-
-	return nil
-}
-
-func (srv *AppServer) SubscribeToTopicWithMaxMsg(topic string, eventHandler eventpubsub.ProcessEvent, maxMessages int) (err error) {
-
-	err = srv.pubSub.SubscribeWithMaxMsg(srv.AppID, topic, eventHandler, maxMessages)
-
-	if err != nil {
-		return err
-	}
-
-	log.PrintfNoContext(srv.AppID, component, "App %s Subscribed to topic %s", srv.AppID, topic)
-
-	return nil
-}
-
-func (srv *AppServer) SubscribeToTopic(topic string, eventHandler eventpubsub.ProcessEvent) (err error) {
-
-	err = srv.pubSub.Subscribe(srv.AppID, topic, eventHandler)
-
-	if err != nil {
-		return err
-	}
-
-	log.PrintfNoContext(srv.AppID, component, "App %s Subscribed to topic %s", srv.AppID, topic)
-
-	return nil
-}
-
-func (srv *AppServer) PublishToTopic(ctx context.Context, topic, contentType string, event []byte) (err error) {
-
-	err = srv.pubSub.Publish(ctx, topic, event, contentType)
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -203,21 +128,19 @@ func (srv *AppServer) prepareShutdown() {
 
 	log.PrintfNoContext(srv.AppID, component, "Cleaning up resources")
 
-	err := srv.pubSub.CleanUp()
-
-	if err != nil {
-		log.ErrorfNoContext(srv.AppID, component, "Error cleaning up pubsub ,%s", err)
-	}
-
 	if srv.cleanupFunc != nil {
-		srv.cleanupFunc(srv)
+		err := srv.cleanupFunc(srv)
+
+		if err != nil {
+			log.ErrorfNoContext(srv.AppID, component, "Error cleaning up pubsub ,%s", err)
+		}
 	}
 
 	log.PrintfNoContext(srv.AppID, component, "Shutting down app server %s", srv.AppID)
 
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
-	err = srv.Shutdown(ctx)
+	err := srv.Shutdown(ctx)
 
 	if err != nil {
 		log.FatalfNoContext(srv.AppID, component, "Error shutting down server, %s", err)
@@ -240,7 +163,7 @@ func (srv *AppServer) addVersionHandler() {
 		ctx := appctx.NewContext(request)
 
 		type v struct {
-			AppID   string
+			AppID   app.ApplicationID
 			Version string
 		}
 
@@ -276,7 +199,7 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 
 		previousAppID := r.Header.Get(appctx.AppIdHeader)
 
-		r.Header.Set(appctx.AppIdHeader, srv.AppID)
+		r.Header.Set(appctx.AppIdHeader, string(srv.AppID))
 
 		ctx := appctx.NewContext(r)
 

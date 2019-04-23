@@ -3,6 +3,7 @@ package log
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -33,7 +34,7 @@ func Errorf(ctx context.Context, component string, format string, args ...interf
 
 }
 
-func ErrorfNoContext(appID, component string, format string, args ...interface{}) {
+func ErrorfNoContext(appID app.ApplicationID, component string, format string, args ...interface{}) {
 
 	log.WithFields(fieldsNoContext(appID, component)).Errorf(format, args...)
 
@@ -45,7 +46,7 @@ func Printf(ctx context.Context, component string, format string, args ...interf
 
 }
 
-func PrintfNoContext(appID, component string, format string, args ...interface{}) {
+func PrintfNoContext(appID app.ApplicationID, component string, format string, args ...interface{}) {
 
 	log.WithFields(fieldsNoContext(appID, component)).Printf(format, args...)
 
@@ -57,7 +58,7 @@ func Fatalf(ctx context.Context, component string, format string, args ...interf
 
 }
 
-func FatalfNoContext(appID, component string, format string, args ...interface{}) {
+func FatalfNoContext(appID app.ApplicationID, component string, format string, args ...interface{}) {
 
 	log.WithFields(fieldsNoContext(appID, component)).Fatalf(format, args...)
 
@@ -84,7 +85,7 @@ func fields(ctx context.Context, component string) log.Fields {
 
 }
 
-func fieldsNoContext(appID, component string) log.Fields {
+func fieldsNoContext(appID app.ApplicationID, component string) log.Fields {
 
 	return log.Fields{
 		"appId":         appID,

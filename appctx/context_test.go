@@ -1,6 +1,7 @@
 package appctx
 
 import (
+	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -50,11 +51,11 @@ func TestNewContextFromDelivery(t *testing.T) {
 	ctx := NewContextFromDelivery("AppID", delivery)
 
 	sessionID := ctx.Value(CorrelationIdHeader).(string)
-	appID := ctx.Value(AppIdHeader).(string)
+	appID := ctx.Value(AppIdHeader).(app.ApplicationID)
 	fromAppID := ctx.Value(FromAppIdHeader).(string)
 
 	assert.Equal(t, "CorrelationID", sessionID)
-	assert.Equal(t, "AppID", appID)
+	assert.Equal(t, app.ApplicationID("AppID"), appID)
 	assert.Equal(t, "FromAppID", fromAppID)
 }
 

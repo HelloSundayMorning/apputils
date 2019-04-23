@@ -1,6 +1,7 @@
 package appctx
 
 import (
+	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 	"net/http"
@@ -41,7 +42,7 @@ func (ctx AppContext) Value(key interface{}) interface{} {
 	return ctx.ValueStore[key.(string)]
 }
 
-func NewContextFromDelivery(appId string, delivery amqp.Delivery) (ctx context.Context) {
+func NewContextFromDelivery(appId app.ApplicationID, delivery amqp.Delivery) (ctx context.Context) {
 
 	store := make(map[string]interface{})
 
