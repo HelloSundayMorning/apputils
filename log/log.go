@@ -66,11 +66,11 @@ func FatalfNoContext(appID app.ApplicationID, component string, format string, a
 
 func fields(ctx context.Context, component string) log.Fields {
 
-	appID := app.ApplicationID("")
+	appID := ""
 	correlationID := ""
 
 	if ctx.Value(appctx.AppIdHeader) != nil {
-		appID = ctx.Value(appctx.AppIdHeader).(app.ApplicationID)
+		appID = ctx.Value(appctx.AppIdHeader).(string)
 	}
 
 	if ctx.Value(appctx.CorrelationIdHeader) != nil {

@@ -42,12 +42,12 @@ func (ctx AppContext) Value(key interface{}) interface{} {
 	return ctx.ValueStore[key.(string)]
 }
 
-func NewContextFromDelivery(appId app.ApplicationID, delivery amqp.Delivery) (ctx context.Context) {
+func NewContextFromDelivery(appID app.ApplicationID, delivery amqp.Delivery) (ctx context.Context) {
 
 	store := make(map[string]interface{})
 
 	store[CorrelationIdHeader] = delivery.CorrelationId
-	store[AppIdHeader] = appId
+	store[AppIdHeader] = string(appID)
 	store[FromAppIdHeader] = delivery.AppId
 
 	ctx = AppContext{
@@ -78,7 +78,7 @@ func NewContextFromValues(appID app.ApplicationID, correlationID string) (ctx co
 	store := make(map[string]interface{})
 
 	store[CorrelationIdHeader] = correlationID
-	store[AppIdHeader] = appID
+	store[AppIdHeader] = string(appID)
 
 	ctx = AppContext{
 		ValueStore: store,

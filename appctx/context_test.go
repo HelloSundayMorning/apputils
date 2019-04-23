@@ -51,11 +51,11 @@ func TestNewContextFromDelivery(t *testing.T) {
 	ctx := NewContextFromDelivery("AppID", delivery)
 
 	sessionID := ctx.Value(CorrelationIdHeader).(string)
-	appID := ctx.Value(AppIdHeader).(app.ApplicationID)
+	appID := ctx.Value(AppIdHeader).(string)
 	fromAppID := ctx.Value(FromAppIdHeader).(string)
 
 	assert.Equal(t, "CorrelationID", sessionID)
-	assert.Equal(t, app.ApplicationID("AppID"), appID)
+	assert.Equal(t, "AppID", appID)
 	assert.Equal(t, "FromAppID", fromAppID)
 }
 
@@ -64,10 +64,10 @@ func TestNewContextFromValue(t *testing.T) {
 	ctx := NewContextFromValues(app.ApplicationID("AppID"), "CorrelationID")
 
 	sessionID := ctx.Value(CorrelationIdHeader).(string)
-	appID := ctx.Value(AppIdHeader).(app.ApplicationID)
+	appID := ctx.Value(AppIdHeader).(string)
 
 	assert.Equal(t, "CorrelationID", sessionID)
-	assert.Equal(t, app.ApplicationID("AppID"), appID)
-	assert.Equal(t, string(app.ApplicationID("AppID")), "AppID")
+	assert.Equal(t, "AppID", appID)
+
 }
 
