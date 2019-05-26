@@ -40,7 +40,7 @@ type (
 
 const (
 	createSagaTable = `CREATE TABLE IF NOT EXISTS saga_manager (
-									 saga_name                  varchar(50)               not null
+									 saga_name                  varchar(50)               not null,
 									 saga_key                   varchar(500)              not null,
                                      timestamp                  bigint                    not null,
                                      events                     json default '{}' :: json not null,
