@@ -4,10 +4,11 @@ Golang library for micro services in HSM k8s cluster.
 
 It includes support for:
 
-- Server with http/REST routes
-- Event driven pub/sub broker with RabbitMQ
-- App context with shared correlation id
-- Log formatting and context a aware
+- server: Server with http/REST routes
+- eventPubSub: Event driven pub/sub broker with RabbitMQ
+- appcontext: App context with shared correlation id
+- applog: Log formatting and context a aware
+- appSaga: Saga manager for handling sequence of events
 
 ### Running tests
 
