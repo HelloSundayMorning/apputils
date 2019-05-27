@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+var (
+	SagaCompletedPreviously = fmt.Errorf("saga completed previously, cannot be handled")
+)
+
 type (
 	Saga struct {
 		SagaName   string
@@ -36,6 +40,8 @@ type (
 	}
 
 	SagaCompletedHandler func(ctx context.Context, saga Saga) (err error)
+
+
 )
 
 const (
@@ -186,6 +192,64 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 
 	conn := sagaManager.sqlDb.GetDB()
 
+	sagaCommitAttempt := 0
+
+	for {
+		sagaCommitAttempt++
+		saga, err = sagaManager.processSaga(ctx, conn, sagaKey, appEvent)
+
+		if err == SagaCompletedPreviously {
+			log.Printf(ctx, "sagaManager", "Saga %s key %s was completed previously. Ignoring handler.", saga.SagaName, saga.SagaKey)
+			return saga, nil
+		}
+
+		if err != nil && sagaCommitAttempt < 2 {
+			log.Printf(ctx, "sagaManager", "Saga %s key %s possibly conflicted with concurrent update. Err msg: %s ,Retrying...", saga.SagaName, saga.SagaKey, err)
+			continue
+		}
+
+		if err != nil {
+			return saga, err
+		}
+
+		break
+	}
+
+	log.Printf(ctx, "sagaManager", "Saga %s key %s updated with event type %s. Completed %t", saga.SagaName, saga.SagaKey, appEvent.EventType, saga.Completed)
+
+	if saga.Completed {
+
+		log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. Handling saga...", saga.SagaName, saga.SagaKey)
+
+		err = sagaManager.completedHandler(ctx, saga)
+
+		if err != nil {
+
+			log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. But got error while executing completed handler. Completion rolled back..., %s", saga.SagaName, saga.SagaKey, err)
+
+			tx, err := conn.Begin()
+
+			saga.Completed = false
+
+			err = sagaManager.store(ctx, tx, &saga)
+
+			err = tx.Commit()
+
+			if err != nil {
+				return saga, err
+			}
+
+			return saga, err
+		}
+
+	}
+
+
+	return saga, nil
+}
+
+func (sagaManager *SagaManager) processSaga(ctx context.Context, conn *sql.DB, sagaKey string, appEvent eventpubsub.AppEvent) (saga Saga, err error){
+
 	tx, err := conn.Begin()
 
 	if err != nil {
@@ -214,13 +278,8 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 			return saga, err
 		}
 
-		log.Printf(ctx, "sagaManager", "Saga %s key %s was completed previously", saga.SagaName, saga.SagaKey)
-		return saga, nil
+		return saga, SagaCompletedPreviously
 	}
-
-	log.Printf(ctx, "sagaManager", "SLEEPING")
-	time.Sleep(30* time.Second)
-	log.Printf(ctx, "sagaManager", "WAKEUP")
 
 	saga.SagaName = sagaManager.SagaName
 	saga.EventTypes = sagaManager.EventTypes
@@ -232,43 +291,18 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 
 	err = sagaManager.store(ctx, tx, &saga)
 
+	if err != nil {
+		return saga, err
+	}
+
 	err = tx.Commit()
 
 	if err != nil {
 		return saga, err
 	}
 
-	log.Printf(ctx, "sagaManager", "Saga %s key %s updated with event type %s. Completed %t", saga.SagaName, saga.SagaKey, appEvent.EventType, saga.Completed)
+	return saga, err
 
-	if saga.Completed {
-
-		log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. Handling saga..., %s", saga.SagaName, saga.SagaKey, err)
-
-		err = sagaManager.completedHandler(ctx, saga)
-
-		if err != nil {
-
-			log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. But got error while executing completed handler. Completion rolled back..., %s", saga.SagaName, saga.SagaKey, err)
-
-			tx, err := conn.Begin()
-
-			saga.Completed = false
-
-			err = sagaManager.store(ctx, tx, &saga)
-
-			err = tx.Commit()
-
-			if err != nil {
-				return saga, err
-			}
-
-			return saga, err
-		}
-
-	}
-
-
-	return saga, nil
 }
 
 func (sagaManager *SagaManager) isValidEvent(appEvent eventpubsub.AppEvent) bool {
