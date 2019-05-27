@@ -51,10 +51,10 @@ const (
 	insertSaga = `INSERT INTO saga_manager (saga_name, saga_key, timestamp, events , event_types, completed)
                                 VALUES ($1, $2, $3, $4, $5, $6)
                                 ON CONFLICT (saga_name, saga_key) DO UPDATE SET
-                                  timestamp = $3,
-                                  events = $4, 
-                                  event_types = $5, 
-                                  completed = $6`
+                                timestamp = $3,
+                                events = $4,
+                                event_types = $5,
+                                completed = $6`
 
 	findSaga = `SELECT saga_name, saga_key, timestamp, events , event_types, completed
                     FROM saga_manager
@@ -108,7 +108,11 @@ func (sagaManager *SagaManager) initialize() (err error) {
 		return err
 	}
 
-	tx.Commit()
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -150,6 +154,8 @@ func (sagaManager *SagaManager) findSagaByKey(ctx context.Context, tx *sql.Tx, s
 
 	defer rows.Close()
 
+	userSaga.Events = make(map[string]eventpubsub.AppEvent)
+
 	var eventsMapJSON json.RawMessage
 
 	if rows.Next() {
@@ -180,10 +186,14 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 
 	conn := sagaManager.sqlDb.GetDB()
 
-	tx, err := conn.BeginTx(ctx, &sql.TxOptions{
-		Isolation: sql.LevelSerializable,
-		ReadOnly:  false,
-	})
+	tx, err := conn.Begin()
+
+	if err != nil {
+		tx.Rollback()
+		return saga, err
+	}
+
+	_, err = tx.Exec(`set transaction isolation level serializable`)   // <=== SET ISOLATION LEVEL
 
 	if err != nil {
 		tx.Rollback()
@@ -198,10 +208,19 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 	}
 
 	if saga.Completed {
-		tx.Commit()
-		log.Printf(ctx, "sagaManager", "Saga %s key %s already Completed", saga.SagaName, saga.SagaKey)
+		err = tx.Commit()
+
+		if err != nil {
+			return saga, err
+		}
+
+		log.Printf(ctx, "sagaManager", "Saga %s key %s was completed previously", saga.SagaName, saga.SagaKey)
 		return saga, nil
 	}
+
+	log.Printf(ctx, "sagaManager", "SLEEPING")
+	time.Sleep(30* time.Second)
+	log.Printf(ctx, "sagaManager", "WAKEUP")
 
 	saga.SagaName = sagaManager.SagaName
 	saga.EventTypes = sagaManager.EventTypes
@@ -211,25 +230,43 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 
 	saga.Completed = sagaManager.validateCompleted(saga)
 
+	err = sagaManager.store(ctx, tx, &saga)
+
+	err = tx.Commit()
+
+	if err != nil {
+		return saga, err
+	}
+
+	log.Printf(ctx, "sagaManager", "Saga %s key %s updated with event type %s. Completed %t", saga.SagaName, saga.SagaKey, appEvent.EventType, saga.Completed)
+
 	if saga.Completed {
+
+		log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. Handling saga..., %s", saga.SagaName, saga.SagaKey, err)
 
 		err = sagaManager.completedHandler(ctx, saga)
 
 		if err != nil {
-			tx.Rollback()
 
-			log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. But got error while executing completed handler, %s", saga.SagaName, saga.SagaKey, err)
+			log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. But got error while executing completed handler. Completion rolled back..., %s", saga.SagaName, saga.SagaKey, err)
+
+			tx, err := conn.Begin()
+
+			saga.Completed = false
+
+			err = sagaManager.store(ctx, tx, &saga)
+
+			err = tx.Commit()
+
+			if err != nil {
+				return saga, err
+			}
 
 			return saga, err
 		}
 
 	}
 
-	err = sagaManager.store(ctx, tx, &saga)
-
-	tx.Commit()
-
-	log.Printf(ctx, "sagaManager", "Saga %s key %s updated with event type %s. Completed %t", saga.SagaName, saga.SagaKey, appEvent.EventType, saga.Completed)
 
 	return saga, nil
 }
