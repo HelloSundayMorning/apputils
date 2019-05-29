@@ -221,17 +221,25 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 
 		log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. Handling saga...", saga.SagaName, saga.SagaKey)
 
-		err = sagaManager.completedHandler(ctx, saga)
+		handlerErr := sagaManager.completedHandler(ctx, saga)
 
-		if err != nil {
+		if handlerErr != nil {
 
-			log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. But got error while executing completed handler. Completion rolled back..., %s", saga.SagaName, saga.SagaKey, err)
+			log.Printf(ctx, "sagaManager", "Saga %s key %s Completed. But got error while executing completed handler. Completion will be rolled back..., %s", saga.SagaName, saga.SagaKey, handlerErr)
 
 			tx, err := conn.Begin()
+
+			if err != nil {
+				return saga, err
+			}
 
 			saga.Completed = false
 
 			err = sagaManager.store(ctx, tx, &saga)
+
+			if err != nil {
+				return saga, err
+			}
 
 			err = tx.Commit()
 
@@ -239,7 +247,7 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 				return saga, err
 			}
 
-			return saga, err
+			return saga, handlerErr
 		}
 
 	}
