@@ -198,28 +198,12 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 
 	if rabbit.publishChannel == nil {
 
-		channel, err := rabbit.MqConnection.Channel()
+		err := rabbit.newPublishChannel()
 
 		if err != nil {
 			return err
 		}
 
-		rabbit.publishChannel = channel
-
-	}
-
-	err = rabbit.publishChannel.ExchangeDeclarePassive(
-		topic,
-		"fanout",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-
-	if err != nil {
-		return err
 	}
 
 	msgID, err := uuid.NewV4()
@@ -242,11 +226,56 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 			AppId:         string(appID),
 		})
 
-	if err != nil {
+	if err == amqp.ErrClosed {
+		log.ErrorfNoContext(rabbit.AppID, component, "Error while publishing on channel or connection, %s. Retry open channel for publishing...", err)
+
+		err := rabbit.newPublishChannel()
+
+		if err != nil {
+			return err
+		}
+
+		err = rabbit.publishChannel.Publish(
+			topic,
+			"",
+			false,
+			false,
+			amqp.Publishing{
+				ContentType:   contentType,
+				Body:          event,
+				MessageId:     msgID.String(),
+				DeliveryMode:  uint8(2),
+				CorrelationId: correlationID,
+				AppId:         string(appID),
+			})
+
+		if err != nil {
+			return err
+		}
+
+	}
+
+	if err != nil && err != amqp.ErrClosed {
 		return err
 	}
 
 	return nil
+}
+
+func (rabbit *RabbitMq) newPublishChannel() (err error) {
+
+	channel, err := rabbit.MqConnection.Channel()
+
+	if err != nil {
+		return err
+	}
+
+	rabbit.publishChannel = channel
+
+	log.PrintfNoContext(rabbit.AppID, component, "New channel set to publish channel.", err)
+
+	return nil
+
 }
 
 func (rabbit *RabbitMq) SubscribeToTopic(topic string, processFunc ProcessEvent) (err error) {
