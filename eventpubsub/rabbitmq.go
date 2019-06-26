@@ -63,9 +63,15 @@ func (rabbit *RabbitMq) WatchConnection(appID app.ApplicationID, user, pw, host 
 					return
 				} else {
 					log.ErrorfNoContext(rabbit.AppID, component, "RabbitMQ Connection error, reconnecting..., %s", rErr)
+
+					registeredTopics := rabbit.registeredTopic // preserve registered topics
+					//TODO: preserve subscriptionChannels by re-initializing the queues and subscription channels
+
 					_ = rabbit.CleanUp()
 
 					rabbit, err := NewRabbitMq(appID, user, pw, host)
+
+					rabbit.registeredTopic = registeredTopics
 
 					if err != nil {
 						log.FatalfNoContext(rabbit.AppID, component, "Error reconnecting to RabbitMQ, %s", rErr)
