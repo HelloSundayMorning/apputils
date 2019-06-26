@@ -42,13 +42,13 @@ func NewRabbitMq(appID app.ApplicationID, user, pw, host string) (rabbitMq *Rabb
 		subscriptionChannels: make(map[string]chan bool),
 	}
 
-	rabbitMq.WatchConnection(appID, user, pw, host)
+	rabbitMq.watchConnection()
 
 	return rabbitMq, nil
 
 }
 
-func (rabbit *RabbitMq) WatchConnection(appID app.ApplicationID, user, pw, host string) {
+func (rabbit *RabbitMq) watchConnection() {
 
 	receiver := make(chan *amqp.Error)
 
