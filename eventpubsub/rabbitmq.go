@@ -60,11 +60,18 @@ func (rabbit *RabbitMq) WatchConnection(appID app.ApplicationID, user, pw, host 
 			case rErr := <-receiver:
 				if rErr == nil {
 					log.PrintfNoContext(rabbit.AppID, component, "RabbitMQ Connection closed")
+
 					return
 				} else {
 					log.ErrorfNoContext(rabbit.AppID, component, "RabbitMQ Connection error, reconnecting..., %s", rErr)
 
-					registeredTopics := rabbit.registeredTopic // preserve registered topics
+					// preserve registered topics
+					registeredTopics := make(map[string]bool)
+
+					for k, v := range rabbit.registeredTopic {
+						registeredTopics[k] = v
+					}
+
 					//TODO: preserve subscriptionChannels by re-initializing the queues and subscription channels
 
 					_ = rabbit.CleanUp()
