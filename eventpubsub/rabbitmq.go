@@ -65,26 +65,22 @@ func (rabbit *RabbitMq) WatchConnection(appID app.ApplicationID, user, pw, host 
 				} else {
 					log.ErrorfNoContext(rabbit.AppID, component, "RabbitMQ Connection error, reconnecting..., %s", rErr)
 
-					// preserve registered topics
-					registeredTopics := make(map[string]bool)
-
-					for k, v := range rabbit.registeredTopic {
-						registeredTopics[k] = v
-					}
-
 					//TODO: preserve subscriptionChannels by re-initializing the queues and subscription channels
+					rabbit.subscriptionChannels = make(map[string]chan bool)
 
-					_ = rabbit.CleanUp()
+					url := fmt.Sprintf("amqp://%s:%s@%s", user, pw, host)
 
-					rabbit, err := NewRabbitMq(appID, user, pw, host)
-
-					rabbit.registeredTopic = registeredTopics
+					mqConnection, err := amqp.Dial(url)
 
 					if err != nil {
 						log.FatalfNoContext(rabbit.AppID, component, "Error reconnecting to RabbitMQ, %s", rErr)
 					}
 
+					rabbit.MqConnection = mqConnection
+
 					log.PrintfNoContext(rabbit.AppID, component, "RabbitMQ Reconnected after connection error")
+
+					rabbit.WatchConnection(appID, user, pw, host)
 
 					return
 				}
