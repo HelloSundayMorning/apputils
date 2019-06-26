@@ -25,24 +25,59 @@ const (
 	component = "eventpubsub_rabbitmq"
 )
 
-func NewRabbitMq(appID app.ApplicationID, user, pw, host string) (handler *RabbitMq, err error) {
+func NewRabbitMq(appID app.ApplicationID, user, pw, host string) (rabbitMq *RabbitMq, err error) {
 
 	url := fmt.Sprintf("amqp://%s:%s@%s", user, pw, host)
 
 	mqConnection, err := amqp.Dial(url)
 
 	if err != nil {
-		return handler, fmt.Errorf("fail to dial RabbitMQ %s, %s", url, err)
+		return rabbitMq, fmt.Errorf("fail to dial RabbitMQ %s, %s", url, err)
 	}
 
-	handler = &RabbitMq{
+	rabbitMq = &RabbitMq{
 		AppID:                appID,
 		MqConnection:         mqConnection,
 		registeredTopic:      make(map[string]bool),
 		subscriptionChannels: make(map[string]chan bool),
 	}
 
-	return handler, nil
+	rabbitMq.WatchConnection(appID, user, pw, host)
+
+	return rabbitMq, nil
+
+}
+
+func (rabbit *RabbitMq) WatchConnection(appID app.ApplicationID, user, pw, host string) {
+
+	receiver := make(chan *amqp.Error)
+
+	receiver = rabbit.MqConnection.NotifyClose(receiver)
+
+	go func() {
+		for {
+			select {
+			case rErr := <-receiver:
+				if rErr == nil {
+					log.PrintfNoContext(rabbit.AppID, component, "RabbitMQ Connection closed")
+					return
+				} else {
+					log.ErrorfNoContext(rabbit.AppID, component, "RabbitMQ Connection error, reconnecting..., %s", rErr)
+					_ = rabbit.CleanUp()
+
+					rabbit, err := NewRabbitMq(appID, user, pw, host)
+
+					if err != nil {
+						log.FatalfNoContext(rabbit.AppID, component, "Error reconnecting to RabbitMQ, %s", rErr)
+					}
+
+					log.PrintfNoContext(rabbit.AppID, component, "RabbitMQ Reconnected after connection error")
+
+					return
+				}
+			}
+		}
+	}()
 
 }
 
