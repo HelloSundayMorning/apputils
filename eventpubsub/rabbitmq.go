@@ -65,24 +65,7 @@ func (rabbit *RabbitMq) WatchConnection(appID app.ApplicationID, user, pw, host 
 				} else {
 					log.FatalfNoContext(rabbit.AppID, component, "RabbitMQ Connection error, terminating app..., %s", rErr)
 
-					////TODO: preserve subscriptionChannels by re-initializing the queues and subscription channels
-					//rabbit.subscriptionChannels = make(map[string]chan bool)
-					//
-					//url := fmt.Sprintf("amqp://%s:%s@%s", user, pw, host)
-					//
-					//mqConnection, err := amqp.Dial(url)
-					//
-					//if err != nil {
-					//	log.FatalfNoContext(rabbit.AppID, component, "Error reconnecting to RabbitMQ, %s", rErr)
-					//}
-					//
-					//rabbit.MqConnection = mqConnection
-					//
-					//log.PrintfNoContext(rabbit.AppID, component, "RabbitMQ Reconnected after connection error")
-					//
-					//rabbit.WatchConnection(appID, user, pw, host)
-
-					//return
+					return
 				}
 			}
 		}
