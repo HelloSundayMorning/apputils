@@ -22,11 +22,16 @@ type (
 	Initialize func(srv *AppServer) (err error)
 	CleanUp func(srv *AppServer) (err error)
 
+	// Application Server object that controls the application state and life cycle.
+	// It's based on the http Server from net/http package, and offers the ability to register HTTP routes.
+	// The router is Handler uses the gorilla/mux implementation
+	// Initialization, Shutdown and Cleanup is managed by the AppServer. Custom functions for initialization and
+	// cleanup are provided so the life cycle of other objects can be added to it.
 	AppServer struct {
 		*http.Server
-		AppID          app.ApplicationID
-		initializeFunc Initialize
-		cleanupFunc    CleanUp
+		AppID          app.ApplicationID  // Unique identifier for the application
+		initializeFunc Initialize         // Custom initialization function
+		cleanupFunc    CleanUp            // Custom cleanup function
 	}
 )
 
@@ -34,6 +39,7 @@ const (
 	component = "server"
 )
 
+// Create a new Application Server instance.
 func NewServer(appID app.ApplicationID, port int) *AppServer {
 
 	router := mux.NewRouter()
@@ -51,6 +57,7 @@ func NewServer(appID app.ApplicationID, port int) *AppServer {
 	return server
 }
 
+// Create a new Application Server instance, with Custom initialization and cleanup functions
 func NewServerWithInitialization(appID app.ApplicationID, port int, initializeFunc Initialize, cleanupFunc CleanUp) *AppServer {
 
 	server := NewServer(appID, port)
@@ -72,6 +79,11 @@ func (srv *AppServer) AddRoute(path, method string, handler http.HandlerFunc) er
 	return nil
 }
 
+func (srv *AppServer) Vars(r *http.Request) map[string]string {
+
+	return mux.Vars(r)
+}
+
 func (srv *AppServer) NewRequestWithContext(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
 
 	newR, err := http.NewRequest(method, url, body)
@@ -88,10 +100,10 @@ func (srv *AppServer) NewRequestWithContext(ctx context.Context, method, url str
 
 func (srv *AppServer) Start() {
 
-	sigc := make(chan os.Signal, 1)
+	sigChan := make(chan os.Signal, 1)
 
-	signal.Notify(sigc, syscall.SIGINT)  // Handling Ctrl + C
-	signal.Notify(sigc, syscall.SIGTERM) // Handling Docker stop
+	signal.Notify(sigChan, syscall.SIGINT)  // Handling Ctrl + C
+	signal.Notify(sigChan, syscall.SIGTERM) // Handling Docker stop
 
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources")
 
@@ -118,7 +130,7 @@ func (srv *AppServer) Start() {
 		}
 	}()
 
-	<-sigc
+	<-sigChan
 
 	srv.prepareShutdown()
 
@@ -132,7 +144,7 @@ func (srv *AppServer) prepareShutdown() {
 		err := srv.cleanupFunc(srv)
 
 		if err != nil {
-			log.ErrorfNoContext(srv.AppID, component, "Error cleaning up pubsub ,%s", err)
+			log.ErrorfNoContext(srv.AppID, component, "Error cleaning up resources ,%s", err)
 		}
 	}
 
