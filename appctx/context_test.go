@@ -25,6 +25,7 @@ func TestAppContext_Value(t *testing.T) {
 	assert.Equal(t, "value", result.(string))
 }
 
+
 func TestNewContext(t *testing.T) {
 
 	r, _ := http.NewRequest("GET", "/", nil)
@@ -46,6 +47,7 @@ func TestNewContextFromDelivery(t *testing.T) {
 	delivery := amqp.Delivery{
 		AppId: "FromAppID",
 		CorrelationId: "CorrelationID",
+		UserId: "userID",
 	}
 
 	ctx := NewContextFromDelivery("AppID", delivery)
@@ -53,10 +55,12 @@ func TestNewContextFromDelivery(t *testing.T) {
 	sessionID := ctx.Value(CorrelationIdHeader).(string)
 	appID := ctx.Value(AppIdHeader).(string)
 	fromAppID := ctx.Value(FromAppIdHeader).(string)
+	userID := ctx.Value(AuthorizedUserIDHeader).(string)
 
 	assert.Equal(t, "CorrelationID", sessionID)
 	assert.Equal(t, "AppID", appID)
 	assert.Equal(t, "FromAppID", fromAppID)
+	assert.Equal(t, "userID", userID)
 }
 
 func TestNewContextFromValue(t *testing.T) {

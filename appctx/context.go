@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
-const(
-	CorrelationIdHeader = "x-correlation-id"
-	AppIdHeader         = "x-app-id"
-	FromAppIdHeader     = "x-from-app-id"
+const (
+	CorrelationIdHeader    = "x-correlation-id"
+	AppIdHeader            = "x-app-id"
+	FromAppIdHeader        = "x-from-app-id"
+	AuthorizedUserIDHeader = "x-authorized-user-id"
 )
 
 type (
@@ -49,6 +50,7 @@ func NewContextFromDelivery(appID app.ApplicationID, delivery amqp.Delivery) (ct
 	store[CorrelationIdHeader] = delivery.CorrelationId
 	store[AppIdHeader] = string(appID)
 	store[FromAppIdHeader] = delivery.AppId
+	store[AuthorizedUserIDHeader] = delivery.UserId
 
 	ctx = AppContext{
 		ValueStore: store,
@@ -64,6 +66,7 @@ func NewContext(r *http.Request) (ctx context.Context) {
 
 	store[CorrelationIdHeader] = r.Header.Get(CorrelationIdHeader)
 	store[AppIdHeader] = r.Header.Get(AppIdHeader)
+	store[AuthorizedUserIDHeader] = r.Header.Get(AuthorizedUserIDHeader)
 
 	ctx = AppContext{
 		ValueStore: store,
@@ -88,4 +91,18 @@ func NewContextFromValues(appID app.ApplicationID, correlationID string) (ctx co
 
 }
 
+func NewContextFromValuesWithUser(appID app.ApplicationID, correlationID string, authUserID string) (ctx context.Context) {
 
+	store := make(map[string]interface{})
+
+	store[CorrelationIdHeader] = correlationID
+	store[AppIdHeader] = string(appID)
+	store[AuthorizedUserIDHeader] = authUserID
+
+	ctx = AppContext{
+		ValueStore: store,
+	}
+
+	return ctx
+
+}

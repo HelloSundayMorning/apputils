@@ -92,8 +92,16 @@ func (srv *AppServer) NewRequestWithContext(ctx context.Context, method, url str
 		return nil, err
 	}
 
+	valueUserID := ctx.Value(appctx.AuthorizedUserIDHeader)
+	userID := ""
+
+	if valueUserID != nil {
+		userID = valueUserID.(string)
+	}
+
 	newR.Header.Set(appctx.AppIdHeader, ctx.Value(appctx.AppIdHeader).(string))
 	newR.Header.Set(appctx.CorrelationIdHeader, ctx.Value(appctx.CorrelationIdHeader).(string))
+	newR.Header.Set(appctx.AuthorizedUserIDHeader, userID)
 
 	return newR, nil
 }
