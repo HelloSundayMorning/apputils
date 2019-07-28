@@ -27,7 +27,6 @@ func init() {
 	//log.SetFormatter(new(MyJSONFormatter))
 }
 
-
 func Errorf(ctx context.Context, component string, format string, args ...interface{}) {
 
 	log.WithFields(fields(ctx, component)).Errorf(format, args...)
@@ -68,6 +67,7 @@ func fields(ctx context.Context, component string) log.Fields {
 
 	appID := ""
 	correlationID := ""
+	UserID := ""
 
 	if ctx.Value(appctx.AppIdHeader) != nil {
 		appID = ctx.Value(appctx.AppIdHeader).(string)
@@ -77,10 +77,15 @@ func fields(ctx context.Context, component string) log.Fields {
 		correlationID = ctx.Value(appctx.CorrelationIdHeader).(string)
 	}
 
+	if ctx.Value(appctx.AuthorizedUserIDHeader) != nil {
+		UserID = ctx.Value(appctx.AuthorizedUserIDHeader).(string)
+	}
+
 	return log.Fields{
 		"appId":         appID,
 		"correlationId": correlationID,
 		"component":     component,
+		"authUserID":    UserID,
 	}
 
 }
@@ -88,8 +93,8 @@ func fields(ctx context.Context, component string) log.Fields {
 func fieldsNoContext(appID app.ApplicationID, component string) log.Fields {
 
 	return log.Fields{
-		"appId":         appID,
-		"component":     component,
+		"appId":     appID,
+		"component": component,
 	}
 
 }
