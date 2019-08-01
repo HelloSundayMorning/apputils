@@ -3,7 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"github.com/HelloSundayMorning/apputils/appctx"
 	_ "github.com/lib/pq"
+	"golang.org/x/net/context"
 )
 
 type (
@@ -51,3 +53,25 @@ func NewPostgresDBWithPort(host, user, pw, dbName, port string) (pgDb *PostgresD
 func (pDb *PostgresDB) GetDB() *sql.DB {
 	return pDb.DB
 }
+
+func (pDb *PostgresDB) SqlTxFromContext(ctx context.Context) (tx *sql.Tx, err error) {
+
+	store := ctx.(appctx.AppContext).ValueStore
+
+	val, ok := store[appctx.SqlTransactionKey]
+
+	if !ok {
+		tx, err = pDb.BeginTx(ctx, nil)
+
+		if err != nil {
+			return tx, err
+		}
+
+		store[appctx.SqlTransactionKey] = tx
+	} else {
+		tx = val.(*sql.Tx)
+	}
+
+	return tx, nil
+}
+

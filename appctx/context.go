@@ -1,6 +1,7 @@
 package appctx
 
 import (
+	"database/sql"
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
@@ -14,6 +15,7 @@ const (
 	AppIdHeader            = "x-app-id"
 	FromAppIdHeader        = "x-from-app-id"
 	AuthorizedUserIDHeader = "x-authorized-user-id"
+	SqlTransactionKey      = "x-sql-transaction-key"
 )
 
 type (
@@ -27,7 +29,10 @@ func (ctx AppContext) Deadline() (deadline time.Time, ok bool) {
 }
 
 func (ctx AppContext) Done() <-chan struct{} {
-	return nil
+
+	cDone := make(chan struct{})
+
+	return cDone
 }
 
 func (ctx AppContext) Err() error {
@@ -105,4 +110,59 @@ func NewContextFromValuesWithUser(appID app.ApplicationID, correlationID string,
 
 	return ctx
 
+}
+
+func CommitSqlTxFromContext(ctx context.Context) (err error) {
+
+	ctx.Done()
+	store := ctx.(AppContext).ValueStore
+
+	val, ok := store[SqlTransactionKey]
+
+	if !ok {
+		// No Tx, do nothing
+		return nil
+	} else {
+		tx := val.(*sql.Tx)
+
+		err := tx.Commit()
+
+		if err != nil {
+
+			store[SqlTransactionKey] = nil
+
+			return err
+		}
+
+		store[SqlTransactionKey] = nil
+	}
+
+	return nil
+}
+
+func RollbackSqlTxFromContext(ctx context.Context) (err error) {
+
+	store := ctx.(AppContext).ValueStore
+
+	val, ok := store[SqlTransactionKey]
+
+	if !ok {
+		// No Tx, do nothing
+		return nil
+	} else {
+		tx := val.(*sql.Tx)
+
+		err := tx.Rollback()
+
+		if err != nil {
+
+			store[SqlTransactionKey] = nil
+
+			return err
+		}
+
+		store[SqlTransactionKey] = nil
+	}
+
+	return nil
 }
