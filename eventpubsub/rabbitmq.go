@@ -308,7 +308,7 @@ func (rabbit *RabbitMq) newPublishChannel() (err error) {
 
 	rabbit.publishChannel = channel
 
-	log.PrintfNoContext(rabbit.AppID, component, "New channel set to publish channel.", err)
+	log.PrintfNoContext(rabbit.AppID, component, "New channel set to publish channel.")
 
 	return nil
 
