@@ -178,7 +178,7 @@ func (srv *AppServer) addVersionHandler() {
 	path := fmt.Sprintf("/%s/version", srv.AppID)
 	method := "GET"
 
-	srv.router().HandleFunc(path, srv.requestInterceptor(func(writer http.ResponseWriter, request *http.Request) {
+	srv.router().HandleFunc(path, func(writer http.ResponseWriter, request *http.Request) {
 
 		ctx := appctx.NewContext(request)
 
@@ -203,7 +203,7 @@ func (srv *AppServer) addVersionHandler() {
 
 		return
 
-	})).Methods(method)
+	}).Methods(method)
 
 	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
 }
