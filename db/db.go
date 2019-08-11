@@ -2,12 +2,22 @@ package db
 
 import (
 	"database/sql"
-	"golang.org/x/net/context"
 )
 
 type (
 	AppSqlDb interface {
 		GetDB() *sql.DB
-		SqlTxFromContext(ctx context.Context) (tx *sql.Tx, err error)
+		WithTx(txFunc func(tx AppSqlTx) error) (err error)
 	}
+
+	AppSqlTx interface {
+		GetTx() *sql.Tx
+
+	}
+
+	AppRepository interface {
+		WithTx(txFunc func(tx AppSqlTx) error) (err error)
+	}
+
+
 )

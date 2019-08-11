@@ -1,6 +1,7 @@
 package eventpubsub
 
 import (
+
 	"fmt"
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
@@ -19,6 +20,7 @@ type (
 		publishChannel       *amqp.Channel
 		subscriptionChannels map[string]chan bool
 	}
+
 )
 
 const (
@@ -213,6 +215,46 @@ func (rabbit *RabbitMq) declareQueue(topic string) (err error) {
 
 	return nil
 }
+
+func (rabbit *RabbitMq) PublishWithTx(txFunc PublishTxHandler) (err error) {
+
+	ch, err := rabbit.MqConnection.Channel()
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = ch.Close()
+	}()
+
+	err = ch.Tx()
+
+	if err != nil {
+		return err
+	}
+
+	err = txFunc(&ChannelTx{
+		publishChannel: ch,
+		registeredTopic: rabbit.registeredTopic,
+	})
+
+	if err != nil {
+		_ = ch.TxRollback()
+		return err
+	}
+
+	err = ch.TxCommit()
+
+	if err != nil {
+		_ = ch.TxRollback()
+		return err
+	}
+
+	return nil
+}
+
+
 
 func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event []byte, contentType string) (err error) {
 
@@ -497,3 +539,5 @@ func newFanOutQueue(channel *amqp.Channel, exchangeName, queueName string, deadL
 
 	return queue, nil
 }
+
+

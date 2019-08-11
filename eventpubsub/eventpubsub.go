@@ -7,6 +7,7 @@ import (
 type (
 
 	ProcessEvent func(ctx context.Context, event []byte, contentType string) error
+	PublishTxHandler func(tx PubSubTx) (err error)
 
 	EventPubSub interface {
 		RegisterTopic(topic string) (err error)
@@ -16,6 +17,7 @@ type (
 		SubscribeToTopicWithMaxMsg(topic string, processFunc ProcessEvent, maxMessages int) (err error)
 		UnSubscribe(topic string)
 		CleanUp() (err error)
+		PublishWithTx(txFunc PublishTxHandler) (err error)
 	}
 
 )

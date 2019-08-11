@@ -13,12 +13,10 @@ type MyJSONFormatter struct {
 }
 
 func (f *MyJSONFormatter) Format(entry *log.Entry) ([]byte, error) {
-	// Note this doesn't include Time, Level and Message which are available on
-	// the Entry. Consult `godoc` on information about those fields or read the
-	// source of the official loggers.
+
 	serialized, err := json.Marshal(entry.Data)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to marshal fields to JSON, %v", err)
+		return nil, fmt.Errorf("failed to marshal fields to JSON, %v", err)
 	}
 	return append(serialized, '\n'), nil
 }

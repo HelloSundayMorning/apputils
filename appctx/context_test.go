@@ -8,23 +8,6 @@ import (
 	"testing"
 )
 
-func TestAppContext_Value(t *testing.T) {
-
-	ctx := AppContext{
-		ValueStore: make(map[string]interface{}),
-	}
-
-	ctx.ValueStore["key"] = "value"
-
-	result := ctx.Value(1)
-
-	assert.Nil(t, result)
-
-	result = ctx.Value("key")
-
-	assert.Equal(t, "value", result.(string))
-}
-
 
 func TestNewContext(t *testing.T) {
 

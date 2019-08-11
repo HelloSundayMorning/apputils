@@ -3,16 +3,22 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/HelloSundayMorning/apputils/appctx"
 	_ "github.com/lib/pq"
-	"golang.org/x/net/context"
 )
 
 type (
 	PostgresDB struct {
 		*sql.DB
 	}
+
+	TxPostgresDb struct {
+		tx *sql.Tx
+	}
 )
+
+func (txDb *TxPostgresDb) GetTx() *sql.Tx {
+	return txDb.tx
+}
 
 func NewPostgresDB(host, user, pw, dbName string) (pgDb *PostgresDB, err error) {
 
@@ -54,24 +60,28 @@ func (pDb *PostgresDB) GetDB() *sql.DB {
 	return pDb.DB
 }
 
-func (pDb *PostgresDB) SqlTxFromContext(ctx context.Context) (tx *sql.Tx, err error) {
 
-	store := ctx.(appctx.AppContext).ValueStore
+func (pDb *PostgresDB) WithTx(txFunc func(tx AppSqlTx) error) (err error) {
 
-	val, ok := store[appctx.SqlTransactionKey]
+	tx, err := pDb.Begin()
 
-	if !ok {
-		tx, err = pDb.BeginTx(ctx, nil)
-
-		if err != nil {
-			return tx, err
-		}
-
-		store[appctx.SqlTransactionKey] = tx
-	} else {
-		tx = val.(*sql.Tx)
+	if err != nil {
+		return err
 	}
 
-	return tx, nil
-}
+	err = txFunc(&TxPostgresDb{tx})
 
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	return nil
+}
