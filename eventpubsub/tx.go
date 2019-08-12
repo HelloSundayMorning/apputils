@@ -56,7 +56,7 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 			DeliveryMode:  uint8(2),
 			CorrelationId: correlationID,
 			AppId:         string(appID),
-			UserId:        userID,
+			//UserId:        userID,
 		})
 
 	if err != nil {

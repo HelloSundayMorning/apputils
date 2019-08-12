@@ -300,7 +300,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 			DeliveryMode:  uint8(2),
 			CorrelationId: correlationID,
 			AppId:         string(appID),
-			UserId:        userID,
+			//UserId:        userID,
 		})
 
 	if err == amqp.ErrClosed {
@@ -324,7 +324,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 				DeliveryMode:  uint8(2),
 				CorrelationId: correlationID,
 				AppId:         string(appID),
-				UserId:        userID,
+				//UserId:        userID,
 			})
 
 		if err != nil {
