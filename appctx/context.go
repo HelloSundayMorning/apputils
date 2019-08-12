@@ -18,12 +18,19 @@ const (
 
 func NewContextFromDelivery(appID app.ApplicationID, delivery amqp.Delivery) (ctx context.Context) {
 
+	valUserID := delivery.Headers[AuthorizedUserIDHeader]
+	userID := ""
+
+	if valUserID != nil {
+		userID = valUserID.(string)
+	}
+
 	ctx = context.Background()
 
 	ctx = context.WithValue(ctx, CorrelationIdHeader, delivery.CorrelationId)
 	ctx = context.WithValue(ctx, AppIdHeader, string(appID))
 	ctx = context.WithValue(ctx, FromAppIdHeader, delivery.AppId)
-	ctx = context.WithValue(ctx, AuthorizedUserIDHeader, delivery.UserId)
+	ctx = context.WithValue(ctx, AuthorizedUserIDHeader, userID)
 
 	return ctx
 

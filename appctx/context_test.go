@@ -30,7 +30,9 @@ func TestNewContextFromDelivery(t *testing.T) {
 	delivery := amqp.Delivery{
 		AppId: "FromAppID",
 		CorrelationId: "CorrelationID",
-		UserId: "userID",
+		Headers: amqp.Table{
+			AuthorizedUserIDHeader :"userID",
+		},
 	}
 
 	ctx := NewContextFromDelivery("AppID", delivery)

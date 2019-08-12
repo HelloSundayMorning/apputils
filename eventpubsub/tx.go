@@ -27,12 +27,12 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 	appID := ctx.Value(appctx.AppIdHeader).(string)
 	correlationID := ctx.Value(appctx.CorrelationIdHeader).(string)
 
-	//valueUserID := ctx.Value(appctx.AuthorizedUserIDHeader)
-	//userID := ""
-	//
-	//if valueUserID != nil {
-	//	userID = valueUserID.(string)
-	//}
+	valueUserID := ctx.Value(appctx.AuthorizedUserIDHeader)
+	userID := ""
+
+	if valueUserID != nil {
+		userID = valueUserID.(string)
+	}
 
 	if !chTx.registeredTopic[topic] {
 		return fmt.Errorf("app %s is not registered for topic %s", appID, topic)
@@ -56,7 +56,9 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 			DeliveryMode:  uint8(2),
 			CorrelationId: correlationID,
 			AppId:         string(appID),
-			//UserId:        userID,
+			Headers: amqp.Table{
+				appctx.AuthorizedUserIDHeader : userID,
+			},
 		})
 
 	if err != nil {

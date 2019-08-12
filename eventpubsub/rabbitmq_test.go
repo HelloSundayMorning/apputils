@@ -78,7 +78,7 @@ func TestRabbitMq_Publish(t *testing.T) {
 	const topic, appID, event = "testPublish", "testApp", "testEvent"
 	rb, _ := NewRabbitMq(appID, "rabbitmq", "rabbitmq", "localhost")
 
-	ctx := appctx.NewContextFromValues(appID, "")
+	ctx := appctx.NewContextFromValuesWithUser(appID, "corrID", "userID")
 
 	err := rb.PublishToTopic(ctx, topic, []byte(event), "text/plain")
 
@@ -109,7 +109,7 @@ func TestRabbitMq_Subscribe(t *testing.T) {
 	ch, _ := rb.MqConnection.Channel()
 	defer ch.Close()
 
-	ctx := appctx.NewContextFromValues(appID, "")
+	ctx := appctx.NewContextFromValuesWithUser(appID, "corrID", "userID")
 
 
 	err := rb.SubscribeToTopic(topic, func(ctx context.Context, event []byte, contentType string) error {
