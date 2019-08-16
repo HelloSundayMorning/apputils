@@ -57,6 +57,24 @@ func NewServer(appID app.ApplicationID, port int) *AppServer {
 	return server
 }
 
+// Create a new Application Server instance with a custom http handler.
+// the AddRoute method does not work with custom http handler, so routes must be added
+// outside the AppServer in the http Handler it self
+func NewServerWithHandler(appID app.ApplicationID, port int, handler http.Handler) *AppServer {
+
+	httpServer := &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: handler,
+	}
+
+	server := &AppServer{
+		Server: httpServer,
+		AppID:  appID,
+	}
+
+	return server
+}
+
 // Create a new Application Server instance, with Custom initialization and cleanup functions
 func NewServerWithInitialization(appID app.ApplicationID, port int, initializeFunc Initialize, cleanupFunc CleanUp) *AppServer {
 
@@ -75,6 +93,17 @@ func (srv *AppServer) AddRoute(path, method string, handler http.HandlerFunc) er
 	srv.router().HandleFunc(path, srv.requestInterceptor(handler)).Methods(method)
 
 	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
+
+	return nil
+}
+
+func (srv *AppServer) AddRoutePrefix(path string, handler http.HandlerFunc) error {
+
+	path = fmt.Sprintf("/%s%s", srv.AppID, path)
+
+	srv.router().PathPrefix(path).HandlerFunc(handler)
+
+	log.PrintfNoContext(srv.AppID, component, "Added route prefix %s for app %s", path, srv.AppID)
 
 	return nil
 }
