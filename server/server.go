@@ -101,7 +101,7 @@ func (srv *AppServer) AddRoutePrefix(path string, handler http.HandlerFunc) erro
 
 	path = fmt.Sprintf("/%s%s", srv.AppID, path)
 
-	srv.router().PathPrefix(path).HandlerFunc(handler)
+	srv.router().PathPrefix(path).HandlerFunc(srv.requestInterceptor(handler))
 
 	log.PrintfNoContext(srv.AppID, component, "Added route prefix %s for app %s", path, srv.AppID)
 
