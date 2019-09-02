@@ -71,5 +71,17 @@ func NewContextFromValuesWithUser(appID app.ApplicationID, correlationID string,
 
 }
 
+func GetAuthorizedUserID(ctx context.Context) (authorizedUserID string) {
+
+	valueUserID := ctx.Value(AuthorizedUserIDHeader)
+
+	if valueUserID != nil {
+		authorizedUserID = valueUserID.(string)
+	}
+
+	return authorizedUserID
+
+}
+
 
 
