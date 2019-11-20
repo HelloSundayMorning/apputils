@@ -29,11 +29,23 @@ services:
     networks:
     - docker-network-local
 
+  redis:
+    image: 'redis:4.0-alpine'
+    ports:
+      - '6379:6379'
+    volumes:
+      - 'redis_data:/redis'
+    networks:
+      - docker-network-local
+
 volumes:
   rabbitmq_data:
     driver: local
 
   postgres_data:
+    driver: local
+
+  redis_data:
     driver: local
 
 networks:
