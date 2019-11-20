@@ -35,3 +35,7 @@ for the tech stack:
     - user: postgres
     - pw: postgresx
     - db: postgres
+    
+- Redis container
+    - on localhost:6379
+       
