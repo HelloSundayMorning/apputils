@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"gopkg.in/DATA-DOG/go-sqlmock.v1"
+	"github.com/DATA-DOG/go-sqlmock"
 )
 
 type (

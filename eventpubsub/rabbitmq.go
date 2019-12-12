@@ -282,11 +282,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 
 	}
 
-	msgID, err := uuid.NewV4()
-
-	if err != nil {
-		return fmt.Errorf("error getting uuid message ID, %s", err)
-	}
+	msgID := uuid.NewV4()
 
 	err = rabbit.publishChannel.Publish(
 		topic,
@@ -441,7 +437,7 @@ func (rabbit *RabbitMq) UnSubscribe(topic string) {
 func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc ProcessEvent) {
 
 	if delivery.CorrelationId == "" {
-		id, _ := uuid.NewV4()
+		id := uuid.NewV4()
 		delivery.CorrelationId = id.String()
 	}
 

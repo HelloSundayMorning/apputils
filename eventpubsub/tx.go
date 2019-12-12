@@ -38,11 +38,7 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 		return fmt.Errorf("app %s is not registered for topic %s", appID, topic)
 	}
 
-	msgID, err := uuid.NewV4()
-
-	if err != nil {
-		return fmt.Errorf("error getting uuid message ID, %s", err)
-	}
+	msgID := uuid.NewV4()
 
 	err = chTx.publishChannel.Publish(
 		topic,

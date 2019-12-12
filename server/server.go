@@ -242,7 +242,7 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Header.Get(appctx.CorrelationIdHeader) == "" {
-			id, _ := uuid.NewV4()
+			id := uuid.NewV4()
 			r.Header.Set(appctx.CorrelationIdHeader, id.String())
 		}
 
