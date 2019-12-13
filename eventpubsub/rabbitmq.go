@@ -97,7 +97,23 @@ func (rabbit *RabbitMq) CleanUp() error {
 
 // RegisterTopic Should be called in the initialization to create an exchange
 // If the exchange exists it's ignored
+//DEPRECATED
 func (rabbit *RabbitMq) RegisterTopic(topic string) (err error) {
+
+	err = rabbit.DeclareTopic(topic)
+
+	if err != nil {
+		return err
+	}
+
+	rabbit.registeredTopic[topic] = true
+
+	log.PrintfNoContext(rabbit.AppID, component, "Registered topic %s for app %s", topic, rabbit.AppID)
+
+	return nil
+}
+
+func (rabbit *RabbitMq) DeclareTopic(topic string) (err error) {
 
 	channel, err := rabbit.MqConnection.Channel()
 
@@ -128,18 +144,17 @@ func (rabbit *RabbitMq) RegisterTopic(topic string) (err error) {
 		return err
 	}
 
-	rabbit.registeredTopic[topic] = true
-
-	log.PrintfNoContext(rabbit.AppID, component, "Registered topic %s for app %s", topic, rabbit.AppID)
+	log.PrintfNoContext(rabbit.AppID, component, "Declared topic %s", topic)
 
 	return nil
 }
 
+//DEPRECATED
 func (rabbit *RabbitMq) InitializeQueue(topic string) (err error) {
 
 	for attempts := 1; attempts < 4; attempts++ {
 
-		err = rabbit.declareQueue(topic)
+		err = rabbit.DeclareQueue(rabbit.AppID, topic)
 		if err == nil {
 			break
 		}
@@ -167,7 +182,7 @@ func (rabbit *RabbitMq) InitializeQueue(topic string) (err error) {
 //
 // - appID : unique name for the application that will subscribe to a topic
 // - topic : topic name
-func (rabbit *RabbitMq) declareQueue(topic string) (err error) {
+func (rabbit *RabbitMq) DeclareQueue(appID app.ApplicationID, topic string) (err error) {
 
 	channel, err := rabbit.MqConnection.Channel()
 
@@ -183,8 +198,8 @@ func (rabbit *RabbitMq) declareQueue(topic string) (err error) {
 		}
 	}()
 
-	appQueueName := formQueueName(rabbit.AppID, topic)
-	deadLetterName := formDeadLetterName(rabbit.AppID, topic)
+	appQueueName := formQueueName(appID, topic)
+	deadLetterName := formDeadLetterName(appID, topic)
 
 	// topic exchange
 	err = channel.ExchangeDeclare(
