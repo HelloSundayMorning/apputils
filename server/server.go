@@ -10,7 +10,7 @@ import (
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 	"io"
-
+	gHandlers "github.com/gorilla/handlers"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,7 +20,7 @@ import (
 
 type (
 	Initialize func(srv *AppServer) (err error)
-	CleanUp func(srv *AppServer) (err error)
+	CleanUp    func(srv *AppServer) (err error)
 
 	// Application Server object that controls the application state and life cycle.
 	// It's based on the http Server from net/http package, and offers the ability to register HTTP routes.
@@ -29,9 +29,10 @@ type (
 	// cleanup are provided so the life cycle of other objects can be added to it.
 	AppServer struct {
 		*http.Server
-		AppID          app.ApplicationID  // Unique identifier for the application
-		initializeFunc Initialize         // Custom initialization function
-		cleanupFunc    CleanUp            // Custom cleanup function
+		AppID          app.ApplicationID // Unique identifier for the application
+		initializeFunc Initialize        // Custom initialization function
+		cleanupFunc    CleanUp           // Custom cleanup function
+		corsOrigins    []string          // Enable CORS and set origins
 	}
 )
 
@@ -76,12 +77,16 @@ func NewServerWithHandler(appID app.ApplicationID, port int, handler http.Handle
 }
 
 // Create a new Application Server instance, with Custom initialization and cleanup functions
-func NewServerWithInitialization(appID app.ApplicationID, port int, initializeFunc Initialize, cleanupFunc CleanUp) *AppServer {
+func NewServerWithInitialization(appID app.ApplicationID, port int, initializeFunc Initialize, cleanupFunc CleanUp, corsOrigins ...string) *AppServer {
 
 	server := NewServer(appID, port)
 
 	server.initializeFunc = initializeFunc
 	server.cleanupFunc = cleanupFunc
+
+	if len(corsOrigins) > 0 {
+		server.corsOrigins = corsOrigins
+	}
 
 	return server
 }
@@ -143,6 +148,15 @@ func (srv *AppServer) Start() {
 	signal.Notify(sigChan, syscall.SIGTERM) // Handling Docker stop
 
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources")
+
+	if len(srv.corsOrigins) {
+		headersOk := gHandlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept,Origin", "User-Agent", "DNT,Cache-Control", "X-Mx-ReqToken", "Keep-Alive", "X-Requested-With", "If-Modified-Since", "Origin"})
+		originsOk := gHandlers.AllowedOrigins(srv.corsOrigins)
+		methodsOk := gHandlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE", "PATCH"})
+		credOK := gHandlers.AllowCredentials()
+		ageOK := gHandlers.MaxAge(600)
+		srv.Handler = gHandlers.CORS(headersOk, originsOk, methodsOk, credOK, ageOK)(srv.Handler)
+	}
 
 	srv.addVersionHandler()
 
