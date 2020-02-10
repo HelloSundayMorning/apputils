@@ -6,11 +6,11 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
+	gHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 	"io"
-	gHandlers "github.com/gorilla/handlers"
 	"net/http"
 	"os"
 	"os/signal"
@@ -149,18 +149,6 @@ func (srv *AppServer) Start() {
 
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources")
 
-	if len(srv.corsOrigins) > 0 {
-
-		log.PrintfNoContext(srv.AppID, component, "Setting CORS origins: %s", srv.corsOrigins)
-
-		headersOk := gHandlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept,Origin", "User-Agent", "DNT,Cache-Control", "X-Mx-ReqToken", "Keep-Alive", "X-Requested-With", "If-Modified-Since", "Origin"})
-		originsOk := gHandlers.AllowedOrigins(srv.corsOrigins)
-		methodsOk := gHandlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE", "PATCH"})
-		credOK := gHandlers.AllowCredentials()
-		ageOK := gHandlers.MaxAge(600)
-		srv.Handler = gHandlers.CORS(headersOk, originsOk, methodsOk, credOK, ageOK)(srv.Handler)
-	}
-
 	srv.addVersionHandler()
 
 	if srv.initializeFunc != nil {
@@ -169,6 +157,19 @@ func (srv *AppServer) Start() {
 
 		if err != nil {
 			log.FatalfNoContext(srv.AppID, component, "Failed to initialize resources, %s", err)
+		}
+
+		if len(srv.corsOrigins) > 0 {
+
+			log.PrintfNoContext(srv.AppID, component, "Setting CORS origins: %s", srv.corsOrigins)
+
+			headersOk := gHandlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept,Origin", "User-Agent", "DNT,Cache-Control", "X-Mx-ReqToken", "Keep-Alive", "X-Requested-With", "If-Modified-Since", "Origin"})
+			originsOk := gHandlers.AllowedOrigins(srv.corsOrigins)
+			methodsOk := gHandlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE", "PATCH"})
+			credOK := gHandlers.AllowCredentials()
+			ageOK := gHandlers.MaxAge(600)
+
+			srv.Handler = gHandlers.CORS(headersOk, originsOk, methodsOk, credOK, ageOK)(srv.Handler)
 		}
 	}
 
@@ -216,6 +217,7 @@ func (srv *AppServer) prepareShutdown() {
 }
 
 func (srv *AppServer) router() *mux.Router {
+
 	return srv.Handler.(*mux.Router)
 }
 
