@@ -149,7 +149,10 @@ func (srv *AppServer) Start() {
 
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources")
 
-	if len(srv.corsOrigins) {
+	if len(srv.corsOrigins) > 0 {
+
+		log.PrintfNoContext(srv.AppID, component, "Setting CORS origins: %s", srv.corsOrigins)
+
 		headersOk := gHandlers.AllowedHeaders([]string{"Authorization", "Content-Type", "Accept,Origin", "User-Agent", "DNT,Cache-Control", "X-Mx-ReqToken", "Keep-Alive", "X-Requested-With", "If-Modified-Since", "Origin"})
 		originsOk := gHandlers.AllowedOrigins(srv.corsOrigins)
 		methodsOk := gHandlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE", "PATCH"})
