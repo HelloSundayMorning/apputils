@@ -2,6 +2,7 @@ package eventpubsub
 
 import (
 	"fmt"
+
 	"github.com/HelloSundayMorning/apputils/appctx"
 	uuid "github.com/satori/go.uuid"
 	"github.com/streadway/amqp"
@@ -9,7 +10,6 @@ import (
 )
 
 type (
-
 	PubSubTx interface {
 		PublishToTopic(ctx context.Context, topic string, event []byte, contentType string) (err error)
 		Commit() (err error)
@@ -55,9 +55,9 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 			MessageId:     msgID.String(),
 			DeliveryMode:  uint8(2),
 			CorrelationId: correlationID,
-			AppId:         string(appID),
+			AppId:         appID,
 			Headers: amqp.Table{
-				appctx.AuthorizedUserIDHeader : userID,
+				appctx.AuthorizedUserIDHeader: userID,
 			},
 		})
 
