@@ -66,6 +66,7 @@ func fields(ctx context.Context, component string) log.Fields {
 	appID := ""
 	correlationID := ""
 	UserID := ""
+	Roles := ""
 
 	if ctx.Value(appctx.AppIdHeader) != nil {
 		appID = ctx.Value(appctx.AppIdHeader).(string)
@@ -79,11 +80,16 @@ func fields(ctx context.Context, component string) log.Fields {
 		UserID = ctx.Value(appctx.AuthorizedUserIDHeader).(string)
 	}
 
+	if ctx.Value(appctx.AuthorizedUserRolesHeader) != nil {
+		Roles = ctx.Value(appctx.AuthorizedUserRolesHeader).(string)
+	}
+
 	return log.Fields{
 		"appId":         appID,
 		"correlationId": correlationID,
 		"component":     component,
 		"authUserID":    UserID,
+		"authUserRoles": Roles,
 	}
 
 }

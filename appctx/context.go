@@ -12,6 +12,7 @@ const (
 	AppIdHeader                   = "x-app-id"
 	FromAppIdHeader               = "x-from-app-id"
 	AuthorizedUserIDHeader        = "x-authorized-user-id"
+	AuthorizedUserRolesHeader     = "x-authorized-user-roles"
 
 
 )
@@ -25,12 +26,20 @@ func NewContextFromDelivery(appID app.ApplicationID, delivery amqp.Delivery) (ct
 		userID = valUserID.(string)
 	}
 
+	valUserRoles := delivery.Headers[AuthorizedUserRolesHeader]
+	userRoles := ""
+
+	if valUserRoles != nil {
+		userRoles = valUserRoles.(string)
+	}
+
 	ctx = context.Background()
 
 	ctx = context.WithValue(ctx, CorrelationIdHeader, delivery.CorrelationId)
 	ctx = context.WithValue(ctx, AppIdHeader, string(appID))
 	ctx = context.WithValue(ctx, FromAppIdHeader, delivery.AppId)
 	ctx = context.WithValue(ctx, AuthorizedUserIDHeader, userID)
+	ctx = context.WithValue(ctx, AuthorizedUserRolesHeader, userRoles)
 
 	return ctx
 
@@ -43,6 +52,7 @@ func NewContext(r *http.Request) (ctx context.Context) {
 	ctx = context.WithValue(ctx, CorrelationIdHeader, r.Header.Get(CorrelationIdHeader))
 	ctx = context.WithValue(ctx, AppIdHeader, r.Header.Get(AppIdHeader))
 	ctx = context.WithValue(ctx, AuthorizedUserIDHeader, r.Header.Get(AuthorizedUserIDHeader))
+	ctx = context.WithValue(ctx, AuthorizedUserRolesHeader, r.Header.Get(AuthorizedUserRolesHeader))
 
 	return ctx
 
@@ -71,6 +81,19 @@ func NewContextFromValuesWithUser(appID app.ApplicationID, correlationID string,
 
 }
 
+func NewContextFromValuesWithUserRoles(appID app.ApplicationID, correlationID string, authUserID, userRoles string) (ctx context.Context) {
+
+	ctx = context.Background()
+
+	ctx = context.WithValue(ctx, CorrelationIdHeader, correlationID)
+	ctx = context.WithValue(ctx, AppIdHeader, string(appID))
+	ctx = context.WithValue(ctx, AuthorizedUserIDHeader, authUserID)
+	ctx = context.WithValue(ctx, AuthorizedUserRolesHeader, userRoles)
+
+	return ctx
+
+}
+
 func GetAuthorizedUserID(ctx context.Context) (authorizedUserID string) {
 
 	valueUserID := ctx.Value(AuthorizedUserIDHeader)
@@ -80,6 +103,18 @@ func GetAuthorizedUserID(ctx context.Context) (authorizedUserID string) {
 	}
 
 	return authorizedUserID
+
+}
+
+func GetAuthorizedUserRoles(ctx context.Context) (authorizedUserRoles string) {
+
+	valueUserRoles := ctx.Value(AuthorizedUserRolesHeader)
+
+	if valueUserRoles != nil {
+		authorizedUserRoles = valueUserRoles.(string)
+	}
+
+	return authorizedUserRoles
 
 }
 

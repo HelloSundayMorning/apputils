@@ -6,7 +6,9 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
+
+	//"github.com/satori/go.uuid"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 	"time"

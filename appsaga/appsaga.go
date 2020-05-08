@@ -265,6 +265,7 @@ func (sagaManager *SagaManager) processSaga(ctx context.Context, conn *sql.DB, s
 		return saga, err
 	}
 
+	//TODO: Test with REPEATABLE READ isolation level
 	_, err = tx.Exec(`set transaction isolation level serializable`)   // <=== SET ISOLATION LEVEL
 
 	if err != nil {

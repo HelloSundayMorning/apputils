@@ -32,6 +32,7 @@ func TestNewContextFromDelivery(t *testing.T) {
 		CorrelationId: "CorrelationID",
 		Headers: amqp.Table{
 			AuthorizedUserIDHeader :"userID",
+			AuthorizedUserRolesHeader: "Admin,Test",
 		},
 	}
 
@@ -41,11 +42,13 @@ func TestNewContextFromDelivery(t *testing.T) {
 	appID := ctx.Value(AppIdHeader).(string)
 	fromAppID := ctx.Value(FromAppIdHeader).(string)
 	userID := ctx.Value(AuthorizedUserIDHeader).(string)
+	roles := ctx.Value(AuthorizedUserRolesHeader).(string)
 
 	assert.Equal(t, "CorrelationID", sessionID)
 	assert.Equal(t, "AppID", appID)
 	assert.Equal(t, "FromAppID", fromAppID)
 	assert.Equal(t, "userID", userID)
+	assert.Equal(t, "Admin,Test", roles)
 }
 
 func TestNewContextFromValue(t *testing.T) {
