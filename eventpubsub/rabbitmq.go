@@ -146,7 +146,7 @@ func (rabbit *RabbitMq) InitializeQueue(topic string) (err error) {
 			break
 		}
 
-		log.PrintfNoContext(rabbit.AppID, component, "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d", topic, attempts)
+		log.PrintfNoContext(rabbit.AppID, component, "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d. Error: %s", topic, attempts, err)
 
 		time.Sleep(time.Second * 30)
 
@@ -178,11 +178,8 @@ func (rabbit *RabbitMq) declareQueue(topic string) (err error) {
 	}
 
 	defer func() {
-		err := channel.Close()
+		_ = channel.Close()
 
-		if err != nil {
-			log.ErrorfNoContext(rabbit.AppID, component, "Error closing channel while initializing queue, %s", err)
-		}
 	}()
 
 	appQueueName := formQueueName(rabbit.AppID, topic)
