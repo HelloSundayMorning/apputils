@@ -1,7 +1,6 @@
 package eventpubsub
 
 import (
-
 	"fmt"
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
@@ -11,7 +10,6 @@ import (
 	//"github.com/satori/go.uuid"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
-	"time"
 )
 
 type (
@@ -22,7 +20,6 @@ type (
 		publishChannel       *amqp.Channel
 		subscriptionChannels map[string]chan bool
 	}
-
 )
 
 const (
@@ -139,18 +136,18 @@ func (rabbit *RabbitMq) RegisterTopic(topic string) (err error) {
 
 func (rabbit *RabbitMq) InitializeQueue(topic string) (err error) {
 
-	for attempts := 1; attempts < 4; attempts++ {
+	//for attempts := 1; attempts < 4; attempts++ {
 
-		err = rabbit.declareQueue(topic)
-		if err == nil {
-			break
-		}
-
-		log.PrintfNoContext(rabbit.AppID, component, "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d. Error: %s", topic, attempts, err)
-
-		time.Sleep(time.Second * 30)
-
-	}
+	err = rabbit.declareQueue(topic)
+	//	if err == nil {
+	//		break
+	//	}
+	//
+	//	log.PrintfNoContext(rabbit.AppID, component, "Failed to initialize queue for topic %s. Waiting (30 sec) for next attempt. Total Attempts = %d. Error: %s", topic, attempts, err)
+	//
+	//	time.Sleep(time.Second * 30)
+	//
+	//}
 
 	if err != nil {
 		log.PrintfNoContext(rabbit.AppID, component, "Failed to initialize queue for topic %s. %s", topic, err)
@@ -234,7 +231,7 @@ func (rabbit *RabbitMq) PublishWithTx(txFunc PublishTxHandler) (err error) {
 	}
 
 	err = txFunc(&ChannelTx{
-		publishChannel: ch,
+		publishChannel:  ch,
 		registeredTopic: rabbit.registeredTopic,
 	})
 
@@ -252,8 +249,6 @@ func (rabbit *RabbitMq) PublishWithTx(txFunc PublishTxHandler) (err error) {
 
 	return nil
 }
-
-
 
 func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event []byte, contentType string) (err error) {
 
@@ -300,7 +295,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 			CorrelationId: correlationID,
 			AppId:         string(appID),
 			Headers: amqp.Table{
-				appctx.AuthorizedUserIDHeader : userID,
+				appctx.AuthorizedUserIDHeader: userID,
 			},
 		})
 
@@ -326,7 +321,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 				CorrelationId: correlationID,
 				AppId:         string(appID),
 				Headers: amqp.Table{
-					appctx.AuthorizedUserIDHeader : userID,
+					appctx.AuthorizedUserIDHeader: userID,
 				},
 			})
 
@@ -542,5 +537,3 @@ func newFanOutQueue(channel *amqp.Channel, exchangeName, queueName string, deadL
 
 	return queue, nil
 }
-
-
