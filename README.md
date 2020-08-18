@@ -9,6 +9,8 @@ It includes support for:
 - appcontext: App context with shared correlation id
 - applog: Log formatting and context a aware
 - appSaga: Saga manager for handling sequence of events
+- Notification Manager: Manager for push notification
+- db: database impl. for postgres and mock
 
 ### Running tests
 
