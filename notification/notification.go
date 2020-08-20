@@ -209,6 +209,66 @@ func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, user
 	return nil
 }
 
+func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Context, userID, title, message string, customData map[string]interface{}) (err error) {
+
+	tokens, err := manager.findTokensByUser(userID)
+
+	for _, token := range tokens {
+
+		switch token.DeviceOS {
+		case IOS:
+			err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
+
+			if err != nil {
+				return err
+			}
+
+		case Android:
+			err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
+
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context.Context, userDeviceToken, title, message string, customData map[string]interface{}) (err error) {
+
+	dataPayload := payload.NewPayload().
+		Alert(title).
+		Badge(0).
+		Sound("default")
+
+	for k, v := range customData {
+		dataPayload.Custom(k, v)
+	}
+
+	notification := apns.Notification{
+		Topic: "io.daybreakapp.app",
+		Payload: dataPayload,
+		DeviceToken: userDeviceToken,
+	}
+
+	r, err := manager.IosClient.Push(&notification)
+
+	if err != nil {
+		return err
+	}
+
+	if r.Sent() {
+		log.Printf(ctx, component, "Sent IOS Data notification, Status %d, ID %s", r.StatusCode, r.ApnsID)
+	} else {
+		log.Printf(ctx, component, "Fail to send IOS Data notification, Status %d, ID %s, Reason %s", r.StatusCode, r.ApnsID, r.Reason)
+	}
+
+	return nil
+
+}
+
 func (manager *AppMobileNotificationManager) sendIOSAlert(ctx context.Context, userDeviceToken, title, message string) (err error) {
 
 	notification := apns.Notification{
@@ -231,6 +291,37 @@ func (manager *AppMobileNotificationManager) sendIOSAlert(ctx context.Context, u
 		log.Printf(ctx, component, "Sent IOS Alert, Status %d, ID %s", r.StatusCode, r.ApnsID)
 	} else {
 		log.Printf(ctx, component, "Fail to send IOS Alert, Status %d, ID %s, Reason %s", r.StatusCode, r.ApnsID, r.Reason)
+	}
+
+	return nil
+}
+
+func (manager *AppMobileNotificationManager) sendAndroidDataNotification(ctx context.Context, userDeviceToken, title, message string, customData map[string]interface{}) (err error) {
+
+	regIDs := []string{userDeviceToken}
+	msg := &fcm.Message{
+		RegistrationIDs:       regIDs,
+		CollapseKey:           "",
+		Data:                  customData,
+		DelayWhileIdle:        false,
+		TimeToLive:            0,
+		RestrictedPackageName: "",
+		DryRun:                false,
+		Notification: fcm.Notification{
+			Title: title,
+			Body:  message,
+		},
+	}
+
+	r, err := manager.FcmClient.Send(msg, 2)
+	if err != nil {
+		return err
+	}
+
+	if r.Success == 1 {
+		log.Printf(ctx, component, "Sent Android Data Notification")
+	} else {
+		log.Printf(ctx, component, "Fail to send Data Notification")
 	}
 
 	return nil
