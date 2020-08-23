@@ -48,7 +48,7 @@ const (
                                      PRIMARY KEY (user_id, token, device_os));`
 
 	insertToken = `INSERT INTO notification_token (user_id, token, device_os, created_at)
-                                VALUES ($1, $2, $3, $4, $5)
+                                VALUES ($1, $2, $3, $4)
                                 ON CONFLICT (user_id, token, device_os) DO NOTHING`
 
 	findToken = `SELECT user_id, token, device_os, created_at
