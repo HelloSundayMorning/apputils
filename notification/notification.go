@@ -19,7 +19,6 @@ type (
 		Token     string
 		DeviceOS  MobileOS
 		CreatedAt int64
-		UpdatedAt int64
 	}
 
 	MobileNotificationManager interface {
@@ -48,12 +47,11 @@ const (
                                      created_at                 bigint                    not null,
                                      PRIMARY KEY (user_id, token, device_os));`
 
-	insertToken = `INSERT INTO notification_token (user_id, token, device_os, created_at , updated_at)
+	insertToken = `INSERT INTO notification_token (user_id, token, device_os, created_at)
                                 VALUES ($1, $2, $3, $4, $5)
-                                ON CONFLICT (user_id, token, device_os) DO UPDATE SET
-                                updated_at = $5`
+                                ON CONFLICT (user_id, token, device_os) DO NOTHING`
 
-	findToken = `SELECT user_id, token, device_os, created_at, updated_at
+	findToken = `SELECT user_id, token, device_os, created_at
                     FROM notification_token
                     WHERE user_id = $1`
 )
@@ -121,7 +119,6 @@ func (manager *AppMobileNotificationManager) AddNotificationToken(ctx context.Co
 		Token:     token,
 		DeviceOS:  deviceOs,
 		CreatedAt: time.Now().UTC().UnixNano(),
-		UpdatedAt: time.Now().UTC().UnixNano(),
 	})
 
 	if err != nil {
@@ -144,7 +141,7 @@ func (manager *AppMobileNotificationManager) store(ctx context.Context, token To
 		return err
 	}
 
-	_, err = stmt.Exec(token.UserID, token.Token, token.DeviceOS, token.CreatedAt, token.UpdatedAt)
+	_, err = stmt.Exec(token.UserID, token.Token, token.DeviceOS, token.CreatedAt)
 
 	if err != nil {
 		tx.Rollback()
@@ -169,7 +166,7 @@ func (manager *AppMobileNotificationManager) findTokensByUser(userID string) (to
 
 		var token Token
 
-		err = rows.Scan(&token.UserID, &token.Token, &token.DeviceOS, &token.CreatedAt, &token.UpdatedAt)
+		err = rows.Scan(&token.UserID, &token.Token, &token.DeviceOS, &token.CreatedAt)
 
 		if err != nil {
 			return tokens, err
