@@ -92,14 +92,14 @@ func (manager *AppMobileNotificationManager) initialize() (err error) {
 	stmt, err := tx.Prepare(createTokenTable)
 
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
 	_, err = stmt.Exec()
 
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
@@ -134,17 +134,21 @@ func (manager *AppMobileNotificationManager) store(ctx context.Context, token To
 
 	tx, err := conn.BeginTx(ctx, nil)
 
+	if err != nil {
+		return err
+	}
+
 	stmt, err := tx.Prepare(insertToken)
 
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
 	_, err = stmt.Exec(token.UserID, token.Token, token.DeviceOS, token.CreatedAt)
 
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
@@ -160,7 +164,9 @@ func (manager *AppMobileNotificationManager) findTokensByUser(userID string) (to
 		return tokens, err
 	}
 
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	for rows.Next() {
 
@@ -245,6 +251,7 @@ func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context
 
 	dataPayload := payload.NewPayload().
 		Alert(title).
+		AlertBody(message).
 		Badge(0).
 		Sound("default")
 
@@ -253,8 +260,8 @@ func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context
 	}
 
 	notification := apns.Notification{
-		Topic: "io.daybreakapp.app",
-		Payload: dataPayload,
+		Topic:       "io.daybreakapp.app",
+		Payload:     dataPayload,
 		DeviceToken: userDeviceToken,
 	}
 
