@@ -250,7 +250,7 @@ func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Co
 func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context.Context, userDeviceToken, title, message string, customData map[string]interface{}) (err error) {
 
 	dataPayload := payload.NewPayload().
-		Alert(title).
+		AlertTitle(title).
 		AlertBody(message).
 		Badge(0).
 		Sound("default")
@@ -286,7 +286,7 @@ func (manager *AppMobileNotificationManager) sendIOSAlert(ctx context.Context, u
 	notification := apns.Notification{
 		Topic: "io.daybreakapp.app",
 		Payload: payload.NewPayload().
-			Alert(title).
+			AlertTitle(title).
 			Badge(0).
 			Sound("default").
 			AlertBody(message),
