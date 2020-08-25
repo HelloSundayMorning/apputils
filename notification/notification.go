@@ -162,7 +162,7 @@ func (manager *AppMobileNotificationManager) findTokensByUser(userID string) (to
 
 	defer rows.Close()
 
-	if rows.Next() {
+	for rows.Next() {
 
 		var token Token
 
@@ -183,7 +183,11 @@ func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, user
 
 	tokens, err := manager.findTokensByUser(userID)
 
+	log.Printf(ctx, component, "Found %d tokens for user %s. Trying to send all", len(tokens), userID)
+
 	for _, token := range tokens {
+
+		log.Printf(ctx, component, "Trying %s token created %v", token.DeviceOS, time.Unix(0, token.CreatedAt))
 
 		switch token.DeviceOS {
 		case IOS:
@@ -210,7 +214,11 @@ func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Co
 
 	tokens, err := manager.findTokensByUser(userID)
 
+	log.Printf(ctx, component, "Found %d tokens for user %s. Trying to send all", len(tokens), userID)
+
 	for _, token := range tokens {
+
+		log.Printf(ctx, component, "Trying %s token created %v", token.DeviceOS, time.Unix(0, token.CreatedAt))
 
 		switch token.DeviceOS {
 		case IOS:
