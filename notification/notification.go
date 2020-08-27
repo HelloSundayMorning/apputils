@@ -49,7 +49,9 @@ const (
 
 	insertToken = `INSERT INTO notification_token (user_id, token, device_os, created_at)
                                 VALUES ($1, $2, $3, $4)
-                                ON CONFLICT (user_id, token, device_os) DO NOTHING`
+                                ON CONFLICT (user_id, token, device_os) 
+                                DO UPDATE SET
+                                created_at = $4`
 
 	findToken = `SELECT user_id, token, device_os, created_at
                     FROM notification_token
