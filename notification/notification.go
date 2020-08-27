@@ -154,6 +154,12 @@ func (manager *AppMobileNotificationManager) store(ctx context.Context, token To
 		return err
 	}
 
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 
 }
