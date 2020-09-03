@@ -339,9 +339,9 @@ func (manager *AppMobileNotificationManager) sendAndroidDataNotification(ctx con
 	}
 
 	if r.Success == 1 {
-		log.Printf(ctx, component, "Sent Android Data Notification")
+		log.Printf(ctx, component, "Sent Android Data Notification. Results %v, id %d", r.Results, r.CanonicalIDs)
 	} else {
-		log.Printf(ctx, component, "Fail to send Data Notification")
+		log.Printf(ctx, component, "Fail to send Data Notification. Failure code %d, Results %v, id %d", r.Failure, r.Results, r.CanonicalIDs)
 	}
 
 	return nil
@@ -370,9 +370,9 @@ func (manager *AppMobileNotificationManager) sendAndroidAlert(ctx context.Contex
 	}
 
 	if r.Success == 1 {
-		log.Printf(ctx, component, "Sent Android Alert")
+		log.Printf(ctx, component, "Sent Android Alert. Results %v, id %d", r.Results, r.CanonicalIDs)
 	} else {
-		log.Printf(ctx, component, "Fail to send Android Alert")
+		log.Printf(ctx, component, "Fail to send Android Alert. Failure code %d, Results %v, id %d", r.Failure, r.Results, r.CanonicalIDs)
 	}
 
 	return nil
