@@ -5,6 +5,7 @@ import (
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -94,6 +95,8 @@ func NewContextFromValuesWithUserRoles(appID app.ApplicationID, correlationID st
 
 }
 
+// GetAuthorizedUserID
+// Returns the authorised user Id
 func GetAuthorizedUserID(ctx context.Context) (authorizedUserID string) {
 
 	valueUserID := ctx.Value(AuthorizedUserIDHeader)
@@ -106,6 +109,9 @@ func GetAuthorizedUserID(ctx context.Context) (authorizedUserID string) {
 
 }
 
+// GetAuthorizedUserRoles
+// Return the authorised user permission roles
+// Roles are returned in the format "Roles1,Roles2"
 func GetAuthorizedUserRoles(ctx context.Context) (authorizedUserRoles string) {
 
 	valueUserRoles := ctx.Value(AuthorizedUserRolesHeader)
@@ -116,6 +122,23 @@ func GetAuthorizedUserRoles(ctx context.Context) (authorizedUserRoles string) {
 
 	return authorizedUserRoles
 
+}
+
+// HasRole
+// Validate if the authorised user has the needed role
+func HasRole(ctx context.Context, needRole string) (valid bool) {
+
+	authUserRoles := GetAuthorizedUserRoles(ctx)
+
+	rolesParts := strings.Split(authUserRoles, ",")
+
+	for _, role := range rolesParts {
+		if role == needRole {
+			return true
+		}
+	}
+
+	return false
 }
 
 
