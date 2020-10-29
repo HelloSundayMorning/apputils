@@ -2,7 +2,7 @@ package uuid
 
 import (
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"strconv"
 )
 
@@ -39,7 +39,7 @@ func NewSeqIDFromUuid(ID string) uint {
 
 func NewUuid() string {
 
-	newUuid := uuid.NewV4()
+	newUuid, _ := uuid.NewV4()
 
 	return newUuid.String()
 

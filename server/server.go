@@ -8,7 +8,7 @@ import (
 	"github.com/HelloSundayMorning/apputils/log"
 	gHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"golang.org/x/net/context"
 	"io"
 	"net/http"
@@ -261,7 +261,7 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Header.Get(appctx.CorrelationIdHeader) == "" {
-			id := uuid.NewV4()
+			id, _ := uuid.NewV4()
 			r.Header.Set(appctx.CorrelationIdHeader, id.String())
 		}
 

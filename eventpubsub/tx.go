@@ -3,7 +3,7 @@ package eventpubsub
 import (
 	"fmt"
 	"github.com/HelloSundayMorning/apputils/appctx"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 )
@@ -38,7 +38,7 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 		return fmt.Errorf("app %s is not registered for topic %s", appID, topic)
 	}
 
-	msgID := uuid.NewV4()
+	msgID, err := uuid.NewV4()
 
 	if err != nil {
 		return fmt.Errorf("error getting uuid message ID, %s", err)

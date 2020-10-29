@@ -5,9 +5,9 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 
-	//"github.com/satori/go.uuid"
+
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 )
@@ -276,7 +276,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 
 	}
 
-	msgID := uuid.NewV4()
+	msgID, err := uuid.NewV4()
 
 	if err != nil {
 		return fmt.Errorf("error getting uuid message ID, %s", err)
@@ -435,7 +435,7 @@ func (rabbit *RabbitMq) UnSubscribe(topic string) {
 func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc ProcessEvent) {
 
 	if delivery.CorrelationId == "" {
-		id := uuid.NewV4()
+		id, _ := uuid.NewV4()
 		delivery.CorrelationId = id.String()
 	}
 
