@@ -309,7 +309,7 @@ func (srv *AppServer) AuthorizeInterceptor(next http.HandlerFunc, authorizedRole
 			return
 		}
 
-		log.Errorf(ctx, component, "User %s authorized", authUserID)
+		log.Printf(ctx, component, "User %s authorized", authUserID)
 
 		next.ServeHTTP(writer, request)
 	}
