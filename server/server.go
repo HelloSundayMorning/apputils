@@ -6,9 +6,9 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
+	"github.com/gofrs/uuid"
 	gHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/gofrs/uuid"
 	"golang.org/x/net/context"
 	"io"
 	"net/http"
@@ -98,6 +98,29 @@ func (srv *AppServer) AddRoute(path, method string, handler http.HandlerFunc) er
 	srv.router().HandleFunc(path, srv.requestInterceptor(handler)).Methods(method)
 
 	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
+
+	return nil
+}
+
+// AddAuthorizedRoute
+// Add http route to the server with a method and enforce the existence of an authorized user in the context
+// and validates roles for the authorized user if requested. Return 401 if no authorized user is present or 403
+// if the authorized user doesn't have any of the required roles.
+// path - the HTTP path route
+// method - the HTTP verb
+// authorizedRoles - list of roles the user must have one to be authorized
+// handler - next HTTP handler called if user is authorized
+func (srv *AppServer) AddAuthorizedRoute(path, method string, authorizedRoles []string, handler http.HandlerFunc) error {
+
+	path = fmt.Sprintf("/%s%s", srv.AppID, path)
+
+	srv.router().HandleFunc(path, srv.requestInterceptor(srv.AuthorizeInterceptor(handler, authorizedRoles))).Methods(method)
+
+	if len(authorizedRoles) > 0 {
+		log.PrintfNoContext(srv.AppID, component, "Added authorized route %s %s with roles %s for app %s", method, path, authorizedRoles, srv.AppID)
+	} else {
+		log.PrintfNoContext(srv.AppID, component, "Added authorized route %s %s for app %s", method, path, srv.AppID)
+	}
 
 	return nil
 }
@@ -254,6 +277,42 @@ func (srv *AppServer) addVersionHandler() {
 	}).Methods(method)
 
 	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
+}
+
+func (srv *AppServer) AuthorizeInterceptor(next http.HandlerFunc, authorizedRoles []string) http.HandlerFunc {
+
+	return func(writer http.ResponseWriter, request *http.Request) {
+
+		ctx := appctx.NewContext(request)
+
+		authUserID := appctx.GetAuthorizedUserID(ctx)
+
+		if authUserID == "" {
+			log.Errorf(ctx, component, "Unauthorized request")
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		isForbidden := true
+
+		for _, role := range authorizedRoles {
+
+			if appctx.HasRole(ctx, role) {
+				isForbidden = false
+				break
+			}
+		}
+
+		if isForbidden {
+			log.Errorf(ctx, component, "User %s forbidden", authUserID)
+			writer.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		log.Errorf(ctx, component, "User %s authorized", authUserID)
+
+		next.ServeHTTP(writer, request)
+	}
 }
 
 func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc {
