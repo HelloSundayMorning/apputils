@@ -3,6 +3,8 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
@@ -44,6 +46,8 @@ const (
 func NewServer(appID app.ApplicationID, port int) *AppServer {
 
 	router := mux.NewRouter()
+
+	router.Use()
 
 	httpServer := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
@@ -132,6 +136,40 @@ func (srv *AppServer) AddRoutePrefix(path string, handler http.HandlerFunc) erro
 	srv.router().PathPrefix(path).HandlerFunc(srv.requestInterceptor(handler))
 
 	log.PrintfNoContext(srv.AppID, component, "Added route prefix %s for app %s", path, srv.AppID)
+
+	return nil
+}
+
+// AddGraphQLHandler
+// Adds the http handler for the graphQL schema on POST /query endpoint
+// Supports the ExecutableSchema from gqlgen lib (https://gqlgen.com/)
+//
+// path - url path that will respond to graphQL queries. It's always a POST
+// gqlSchema - The executable Schema from gqlgen. It's a generated code
+//
+// Example call:
+//
+// 			srv.AddGraphQLHandler("/query", generated.NewExecutableSchema(generated.Config{
+//					Resolvers: &resolver.Resolver{},
+//			}))
+//
+func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.ExecutableSchema) (err error) {
+
+	path = fmt.Sprintf("/%s%s", srv.AppID, path)
+
+	gqlServer := handler.NewDefaultServer(gqlSchema)
+
+	srv.router().HandleFunc(path, srv.requestInterceptor(func(writer http.ResponseWriter, request *http.Request) {
+
+		ctx := appctx.NewContext(request)
+
+		request = request.WithContext(ctx)
+
+		gqlServer.ServeHTTP(writer, request)
+
+	})).Methods("POST")
+
+	log.PrintfNoContext(srv.AppID, component, "Added GraphQL route %s %s for app %s", "POST", path, srv.AppID)
 
 	return nil
 }
