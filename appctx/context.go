@@ -141,6 +141,17 @@ func HasRole(ctx context.Context, needRole string) (valid bool) {
 	return false
 }
 
+// CheckPermission
+// Returns true if user has any role in context that we allowed
+// 	e.g. allowedRoleList := []string{roles.UserRoleTriageUser,roles.UserRoleAdmin}
+func HasAllowRoles(ctx context.Context, allowedRoles []string) bool {
 
+	for _, role := range allowedRoles {
 
+		if HasRole(ctx, role) {
+			return true
+		}
+	}
 
+	return false
+}
