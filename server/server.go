@@ -95,6 +95,12 @@ func NewServerWithInitialization(appID app.ApplicationID, port int, initializeFu
 	return server
 }
 
+// AddRoute
+// Add http route to the server with a method.
+// The path is added after the server appID ie. /appID/path
+// path - the HTTP path route
+// method - the HTTP verb
+// handler - next HTTP handler called if user is authorized
 func (srv *AppServer) AddRoute(path, method string, handler http.HandlerFunc) error {
 
 	path = fmt.Sprintf("/%s%s", srv.AppID, path)
@@ -106,10 +112,26 @@ func (srv *AppServer) AddRoute(path, method string, handler http.HandlerFunc) er
 	return nil
 }
 
+// AddRoute
+// Add http route to the server with a method.
+// The path is added without appID ie. /path
+// path - the HTTP path route
+// method - the HTTP verb
+// handler - next HTTP handler called if user is authorized
+func (srv *AppServer) AddRouteNoAppID(path, method string, handler http.HandlerFunc) error {
+
+	srv.router().HandleFunc(path, srv.requestInterceptor(handler)).Methods(method)
+
+	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
+
+	return nil
+}
+
 // AddAuthorizedRoute
-// Add http route to the server with a method and enforce the existence of an authorized user in the context
-// and validates roles for the authorized user if requested. Return 401 if no authorized user is present or 403
+// Add http route to the server with a method. It enforces the existence of an authorized user in the context
+// and validates roles for the authorized user. Return 401 if no authorized user is present or 403
 // if the authorized user doesn't have any of the required roles.
+// The path is added after the server appID ie. /appID/path
 // path - the HTTP path route
 // method - the HTTP verb
 // authorizedRoles - list of roles the user must have one to be authorized
