@@ -16,4 +16,6 @@ require (
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/net v0.0.0-20201029055024-942e2f445f3c
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0
+
+	github.com/HelloSundayMorning/hsmevents v1.1.0
 )

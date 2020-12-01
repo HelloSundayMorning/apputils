@@ -1,6 +1,8 @@
 github.com/99designs/gqlgen v0.13.0 h1:haLTcUp3Vwp80xMVEg5KRNwzfUrgFdRmtBY8fuB8scA=
 github.com/99designs/gqlgen v0.13.0/go.mod h1:NV130r6f4tpRWuAI+zsrSdooO/eWUv+Gyyoi3rEfXIk=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/HelloSundayMorning/hsmevents v1.1.0 h1:Tp5Hdj7iJfrKKdI5eamXug1akFrwKib+Gl0ovaomO7c=
+github.com/HelloSundayMorning/hsmevents v1.1.0/go.mod h1:gTN6pPjWy279t6ayfIUmc+4GOZYL9n4MCmV/z/Wb958=
 github.com/Smarp/fcm-http v0.0.0-20200324163629-c2a436894c80 h1:qUnfqaygvpn18wHGPAlJtbW7OXqMU+qQlDU7pQ/5Kbw=
 github.com/Smarp/fcm-http v0.0.0-20200324163629-c2a436894c80/go.mod h1:b8EBTSbnnWdiAR96ts7fD/7zFwX5ViFfeJHUzOJc3KY=
 github.com/agnivade/levenshtein v1.0.1/go.mod h1:CURSv5d9Uaml+FovSIICkLbAUZ9S4RqaHDIsdSBg7lM=
