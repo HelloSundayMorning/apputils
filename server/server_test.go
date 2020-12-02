@@ -18,6 +18,12 @@ func TestAppServer_AddAuthorizedRoute(t *testing.T) {
 
 	assert.Nil(t, err)
 
+	err = srv.AddAuthorizedRoute("/NOROLE", "GET", []string{}, func(writer http.ResponseWriter, request *http.Request) {
+
+	})
+
+	assert.Nil(t, err)
+
 	type testDef struct {
 		Req *http.Request
 		ExpectedStatus int
@@ -42,6 +48,9 @@ func TestAppServer_AddAuthorizedRoute(t *testing.T) {
 		{reqFunc("GET","/APPID/", "UserID", "ROLE3,ROLE1"), http.StatusOK},
 		{reqFunc("GET","/APPID/", "UserID", "ROLE1,ROLE2"), http.StatusOK},
 		{reqFunc("GET","/APPID/", "UserID", "ROLE3,ROLE4"), http.StatusForbidden},
+		{reqFunc("GET","/APPID/NOROLE", "", ""), http.StatusUnauthorized},
+		{reqFunc("GET","/APPID/NOROLE", "", "ROLE1"), http.StatusUnauthorized},
+		{reqFunc("GET","/APPID/NOROLE", "UserID", ""), http.StatusOK},
 	}
 
 	for idx, test := range Tests{

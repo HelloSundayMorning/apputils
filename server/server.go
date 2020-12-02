@@ -353,20 +353,23 @@ func (srv *AppServer) AuthorizeInterceptor(next http.HandlerFunc, authorizedRole
 			return
 		}
 
-		isForbidden := true
+		if len(authorizedRoles) > 0 {
 
-		for _, role := range authorizedRoles {
+			isForbidden := true
 
-			if appctx.HasRole(ctx, role) {
-				isForbidden = false
-				break
+			for _, role := range authorizedRoles {
+
+				if appctx.HasRole(ctx, role) {
+					isForbidden = false
+					break
+				}
 			}
-		}
 
-		if isForbidden {
-			log.Errorf(ctx, component, "User %s forbidden", authUserID)
-			writer.WriteHeader(http.StatusForbidden)
-			return
+			if isForbidden {
+				log.Errorf(ctx, component, "User %s forbidden", authUserID)
+				writer.WriteHeader(http.StatusForbidden)
+				return
+			}
 		}
 
 		log.Printf(ctx, component, "User %s authorized", authUserID)
