@@ -51,6 +51,7 @@ func TestAppServer_AddAuthorizedRoute(t *testing.T) {
 		{reqFunc("GET","/APPID/NOROLE", "", ""), http.StatusUnauthorized},
 		{reqFunc("GET","/APPID/NOROLE", "", "ROLE1"), http.StatusUnauthorized},
 		{reqFunc("GET","/APPID/NOROLE", "UserID", ""), http.StatusOK},
+		{reqFunc("GET","/APPID/NOROLE", "UserID", "ROLE1"), http.StatusOK},
 	}
 
 	for idx, test := range Tests{

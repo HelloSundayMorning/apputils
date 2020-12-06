@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/99designs/gqlgen v0.13.0
+	github.com/HelloSundayMorning/hsmevents v1.1.0
 	github.com/Smarp/fcm-http v0.0.0-20200324163629-c2a436894c80
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/gofrs/uuid v3.3.0+incompatible
@@ -16,6 +17,5 @@ require (
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/net v0.0.0-20201029055024-942e2f445f3c
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0
-
-	github.com/HelloSundayMorning/hsmevents v1.1.0
+	gopkg.in/yaml.v2 v2.2.4
 )

@@ -24,6 +24,7 @@ type (
 	Initialize func(srv *AppServer) (err error)
 	CleanUp    func(srv *AppServer) (err error)
 
+	// AppServer
 	// Application Server object that controls the application state and life cycle.
 	// It's based on the http Server from net/http package, and offers the ability to register HTTP routes.
 	// The router is Handler uses the gorilla/mux implementation
@@ -42,6 +43,7 @@ const (
 	component = "server"
 )
 
+// NewServer
 // Create a new Application Server instance.
 func NewServer(appID app.ApplicationID, port int) *AppServer {
 
@@ -62,24 +64,7 @@ func NewServer(appID app.ApplicationID, port int) *AppServer {
 	return server
 }
 
-// Create a new Application Server instance with a custom http handler.
-// the AddRoute method does not work with custom http handler, so routes must be added
-// outside the AppServer in the http Handler it self
-func NewServerWithHandler(appID app.ApplicationID, port int, handler http.Handler) *AppServer {
-
-	httpServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: handler,
-	}
-
-	server := &AppServer{
-		Server: httpServer,
-		AppID:  appID,
-	}
-
-	return server
-}
-
+// NewServerWithInitialization
 // Create a new Application Server instance, with Custom initialization and cleanup functions
 func NewServerWithInitialization(appID app.ApplicationID, port int, initializeFunc Initialize, cleanupFunc CleanUp, corsOrigins ...string) *AppServer {
 
