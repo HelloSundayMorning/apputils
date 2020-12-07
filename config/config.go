@@ -9,9 +9,9 @@ type (
 	}
 )
 
-func NewConfig(appID app.ApplicationID) (config Configuration) {
+func NewConfig(appID app.ApplicationID) (config *Configuration) {
 
-	return Configuration{
+	return &Configuration{
 		AppID: appID,
 	}
 }

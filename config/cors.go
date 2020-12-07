@@ -34,7 +34,7 @@ type (
 // SetCorsConfig
 // Will load CORS configuration from the default YAML file in /app/config/cors_url_config.yaml
 // or the path in CORS_CONFIG_FILE if present.
-func (config Configuration) LoadCorsConfig() (err error) {
+func (config *Configuration) LoadCorsConfig() (err error) {
 	component := "LoadCorsConfig"
 
 	filePath := os.Getenv(corsUrlPath)
