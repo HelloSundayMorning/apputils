@@ -34,6 +34,13 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 		userID = valueUserID.(string)
 	}
 
+	valUserRoles := ctx.Value(appctx.AuthorizedUserRolesHeader)
+	userRoles := ""
+
+	if valUserRoles != nil {
+		userRoles = valUserRoles.(string)
+	}
+
 	if !chTx.registeredTopic[topic] {
 		return fmt.Errorf("app %s is not registered for topic %s", appID, topic)
 	}
@@ -58,6 +65,7 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 			AppId:         string(appID),
 			Headers: amqp.Table{
 				appctx.AuthorizedUserIDHeader : userID,
+				appctx.AuthorizedUserRolesHeader: userRoles,
 			},
 		})
 

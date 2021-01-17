@@ -99,6 +99,48 @@ func TestRabbitMq_Publish(t *testing.T) {
 	rb.CleanUp()
 }
 
+func TestRabbitMq_Publish_With_Tx(t *testing.T) {
+
+	const topic, appID, event = "testPublish", "testApp", "testEvent"
+	rb, _ := NewRabbitMq(appID, "rabbitmq", "rabbitmq", "localhost")
+
+	ctx := appctx.NewContextFromValuesWithUser(appID, "corrID", "userID")
+
+	err := rb.PublishWithTx(func(tx PubSubTx) (err error) {
+		err = tx.PublishToTopic(ctx, topic, []byte(event), "text/plain")
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "app testApp is not registered for topic testPublish", err.Error())
+
+	rb.RegisterTopic(topic)
+
+	err = rb.PublishWithTx(func(tx PubSubTx) (err error) {
+		err = tx.PublishToTopic(ctx, topic, []byte(event), "text/plain")
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	assert.Nil(t, err)
+
+	ch, _ := rb.MqConnection.Channel()
+	defer ch.Close()
+
+	ch.ExchangeDelete(topic, false, true)
+
+	rb.CleanUp()
+}
+
 func TestRabbitMq_Subscribe(t *testing.T) {
 
 	const topic, appID, event = "testSubscribe", "testApp", "testEvent"
