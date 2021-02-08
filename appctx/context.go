@@ -15,6 +15,9 @@ const (
 	AuthorizedUserIDHeader        = "x-authorized-user-id"
 	AuthorizedUserRolesHeader     = "x-authorized-user-roles"
 
+	// Header for unauthorized api access in the pub API
+	UnauthorizedPubAccessToken    = "x-unauthorized-public-access-token"
+
 
 )
 
