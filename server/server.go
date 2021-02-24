@@ -218,6 +218,7 @@ func (srv *AppServer) Start() {
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources")
 
 	srv.addVersionHandler()
+	srv.addHealthHandler()
 
 	if srv.initializeFunc != nil {
 
@@ -287,6 +288,18 @@ func (srv *AppServer) prepareShutdown() {
 func (srv *AppServer) router() *mux.Router {
 
 	return srv.Handler.(*mux.Router)
+}
+
+func (srv *AppServer) addHealthHandler() {
+
+	path := "/healthz"
+	method := "GET"
+
+	srv.router().HandleFunc(path, func(writer http.ResponseWriter, request *http.Request) {
+
+	}).Methods(method)
+
+	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
 }
 
 func (srv *AppServer) addVersionHandler() {
