@@ -293,13 +293,16 @@ func (srv *AppServer) router() *mux.Router {
 func (srv *AppServer) addHealthHandler() {
 
 	path := "/healthz"
+	pathAppID := fmt.Sprintf("/%s/healthz", srv.AppID)
 	method := "GET"
 
-	srv.router().HandleFunc(path, func(writer http.ResponseWriter, request *http.Request) {
+	f := func(writer http.ResponseWriter, request *http.Request) {}
 
-	}).Methods(method)
+	srv.router().HandleFunc(path, f).Methods(method)
+	srv.router().HandleFunc(pathAppID, f).Methods(method)
 
 	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, path, srv.AppID)
+	log.PrintfNoContext(srv.AppID, component, "Added route %s %s for app %s", method, pathAppID, srv.AppID)
 }
 
 func (srv *AppServer) addVersionHandler() {
