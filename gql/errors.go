@@ -10,8 +10,8 @@ import (
 // UnauthorizedErrorCode 401 indicates an unauthorized request
 const UnauthorizedErrorCode = 401
 
-// NewUnaothorizedError creates a new instance of Unauthorized error with the given context and message
-func NewUnaothorizedError(ctx context.Context, message *string) *gqlerror.Error {
+// NewUnauthorizedError creates a new instance of Unauthorized error with the given context and message
+func NewUnauthorizedError(ctx context.Context, message *string) *gqlerror.Error {
 	paths := graphql.GetPath(ctx)
 	iPaths := make([]interface{}, len(paths))
 	for i, path := range paths {
