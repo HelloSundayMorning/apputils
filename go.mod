@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	github.com/99designs/gqlgen v0.13.0
-	github.com/HelloSundayMorning/hsmevents v1.1.0
 	github.com/Smarp/fcm-http v0.0.0-20200324163629-c2a436894c80
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/gofrs/uuid v3.3.0+incompatible

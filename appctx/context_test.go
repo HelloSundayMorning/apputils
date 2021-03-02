@@ -8,8 +8,7 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/HelloSundayMorning/hsmevents/roles" // now hsmenvet in go mod
+	
 )
 
 func TestNewContext(t *testing.T) {
@@ -78,19 +77,19 @@ func TestHasAllowRoles_OnlyAdminAndTriageAllowed(t *testing.T) {
 			Expected: false,
 			Msg:      "disallow: empty roles",
 		}, {
-			Roles:    []string{roles.UserRoleAdmin, roles.UserRoleTriageUser},
+			Roles:    []string{"ADMIN", "TA"},
 			Expected: true,
 			Msg:      "fully allow: admin and triage user",
 		}, {
-			Roles:    []string{roles.UserRoleFeedMonitor},
+			Roles:    []string{"MONITOR"},
 			Expected: false,
 			Msg:      "fully disallowed: feed monitor",
 		}, {
-			Roles:    []string{roles.UserRoleCommunityManager},
+			Roles:    []string{"MANAGER"},
 			Expected: false,
 			Msg:      "fully disallowed: community manager",
 		}, {
-			Roles:    []string{roles.UserRoleTriageUser, roles.UserRoleCommunityManager},
+			Roles:    []string{"TA", "MANAGER"},
 			Expected: true,
 			Msg:      "partiall allowed, partial disallowed : community manager + triage user should be allowed",
 		},
@@ -101,7 +100,7 @@ func TestHasAllowRoles_OnlyAdminAndTriageAllowed(t *testing.T) {
 		// Test triage app permission
 		ctx := NewContextFromValuesWithUserRoles(
 			"testApp", "", "",
-			strings.Join([]string{roles.UserRoleTriageUser, roles.UserRoleAdmin}, ","))
+			strings.Join([]string{"TA", "ADMIN"}, ","))
 
 		actual := HasAllowRoles(ctx, test.Roles)
 
