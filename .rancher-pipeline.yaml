@@ -1,0 +1,31 @@
+stages:
+  - name: Build
+    steps:
+      - runScriptConfig:
+          image: golang:1.15.1
+          shellScript: |-
+            git config --global url."https://${GIT_USER}:${GIT_ACCESS_TOKEN}@github.com".insteadOf "https://github.com"
+            go generate ./...
+            go test -cover ./...
+          when:
+            event:
+              include:
+                - tag
+        envFrom:
+          - sourceName: github-access-token
+            sourceKey: git-user
+            targetKey: GIT_USER
+          - sourceName: github-access-token
+            sourceKey: git-access-token
+            targetKey: GIT_ACCESS_TOKEN
+branch: {}
+notification:
+  recipients:
+    - recipient: '#ci-cd'
+      notifier: c-4qs59:n-xvdjq
+    - recipient: '#ci-cd'
+      notifier: c-vzzkg:n-tjn84
+  condition:
+    - Success
+    - Changed
+    - Failed
