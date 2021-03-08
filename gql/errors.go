@@ -10,16 +10,14 @@ import (
 
 // NewUnauthorizedError creates a new instance of Unauthorized error with the given context and message
 func NewUnauthorizedError(ctx context.Context, message *string) *gqlerror.Error {
-	iPaths := getGQLPath(ctx)
 
-	return newError(iPaths, message, http.StatusUnauthorized)
+	return newError(ctx, message, http.StatusUnauthorized)
 }
 
 // NewForbiddenError creates a new instance of Forbidden error with the given context and message
 func NewForbiddenError(ctx context.Context, message *string) *gqlerror.Error {
-	iPaths := getGQLPath(ctx)
 
-	return newError(iPaths, message, http.StatusForbidden)
+	return newError(ctx, message, http.StatusForbidden)
 }
 
 func getGQLPath(ctx context.Context) []interface{} {
@@ -31,7 +29,9 @@ func getGQLPath(ctx context.Context) []interface{} {
 	return iPaths
 }
 
-func newError(path []interface{}, message *string, errorCode int) *gqlerror.Error {
+func newError(ctx context.Context, message *string, errorCode int) *gqlerror.Error {
+	path := getGQLPath(ctx)
+
 	return &gqlerror.Error{
 		Path:    path,
 		Message: *message,
