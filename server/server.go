@@ -8,6 +8,7 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
+	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/gofrs/uuid"
 	gHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -19,6 +20,13 @@ import (
 	"syscall"
 	"time"
 )
+
+func init() {
+	xray.Configure(xray.Config{
+		DaemonAddr:                  "xray-service.default:2000", // default
+		ServiceVersion:              os.Getenv(app.AppVersionEnv),
+	})
+}
 
 type (
 	Initialize func(srv *AppServer) (err error)
@@ -36,6 +44,7 @@ type (
 		initializeFunc Initialize        // Custom initialization function
 		cleanupFunc    CleanUp           // Custom cleanup function
 		corsOrigins    []string          // Enable CORS and set origins
+		environment    string            // The environment name
 	}
 )
 
@@ -46,6 +55,12 @@ const (
 // NewServer
 // Create a new Application Server instance.
 func NewServer(appID app.ApplicationID, port int) *AppServer {
+
+	env := os.Getenv(app.AppEnvironmentEnv)
+
+	if env != app.ProductionEnvironment && env != app.StagingEnvironment {
+		log.FatalfNoContext(appID, component, "Environment variable %s missing or invalid. Expected %s or %s", app.AppEnvironmentEnv, app.StagingEnvironment, app.ProductionEnvironment)
+	}
 
 	router := mux.NewRouter()
 
@@ -59,6 +74,7 @@ func NewServer(appID app.ApplicationID, port int) *AppServer {
 	server := &AppServer{
 		Server: httpServer,
 		AppID:  appID,
+		environment: env,
 	}
 
 	return server
@@ -215,7 +231,7 @@ func (srv *AppServer) Start() {
 	signal.Notify(sigChan, syscall.SIGINT)  // Handling Ctrl + C
 	signal.Notify(sigChan, syscall.SIGTERM) // Handling Docker stop
 
-	log.PrintfNoContext(srv.AppID, component, "Initializing resources")
+	log.PrintfNoContext(srv.AppID, component, "Initializing resources for %s environment", srv.environment)
 
 	srv.addVersionHandler()
 	srv.addHealthHandler()
@@ -321,7 +337,7 @@ func (srv *AppServer) addVersionHandler() {
 
 		vJSON, _ := json.Marshal(&v{
 			AppID:   srv.AppID,
-			Version: os.Getenv("APP_VERSION"),
+			Version: os.Getenv(app.AppVersionEnv),
 		})
 
 		writer.Header().Set("Content-Type", "application/json")
@@ -400,7 +416,12 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 			log.Printf(ctx, component, "Request %s %s", r.Method, r.RequestURI)
 		}
 
-		next.ServeHTTP(w, r)
+		if srv.environment == app.ProductionEnvironment {
+			xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), next).ServeHTTP(w, r)
+		} else {
+			next.ServeHTTP(w,r)
+		}
+
 
 	}
 }
