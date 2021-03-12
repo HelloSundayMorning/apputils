@@ -5,6 +5,7 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
+	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/gofrs/uuid"
 
 
@@ -450,6 +451,8 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 
 	ctx := appctx.NewContextFromDelivery(rabbit.AppID, delivery)
 
+	ctx, seg := xray.BeginSegment(ctx, string(rabbit.AppID))
+
 	err := processFunc(ctx, delivery.Body, delivery.ContentType)
 
 	if err != nil {
@@ -468,6 +471,8 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 			log.Errorf(ctx, component, "Error while Nack delivery, %s", err)
 		}
 
+		seg.Close(err)
+
 		return
 	}
 
@@ -476,6 +481,8 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 	if err != nil {
 		log.Errorf(ctx, component, "Error while Ack delivery, %s", err)
 	}
+
+	seg.Close(err)
 }
 
 func formQueueName(appID app.ApplicationID, topic string) string {
