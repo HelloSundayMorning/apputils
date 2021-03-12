@@ -21,13 +21,6 @@ import (
 	"time"
 )
 
-func init() {
-	xray.Configure(xray.Config{
-		DaemonAddr:                  "xray-service.default:2000", // default
-		ServiceVersion:              os.Getenv(app.AppVersionEnv),
-	})
-}
-
 type (
 	Initialize func(srv *AppServer) (err error)
 	CleanUp    func(srv *AppServer) (err error)
@@ -56,12 +49,6 @@ const (
 // Create a new Application Server instance.
 func NewServer(appID app.ApplicationID, port int) *AppServer {
 
-	env := os.Getenv(app.AppEnvironmentEnv)
-
-	if env != app.ProductionEnvironment && env != app.StagingEnvironment {
-		log.FatalfNoContext(appID, component, "Environment variable %s missing or invalid. Expected %s or %s", app.AppEnvironmentEnv, app.StagingEnvironment, app.ProductionEnvironment)
-	}
-
 	router := mux.NewRouter()
 
 	router.Use()
@@ -72,9 +59,8 @@ func NewServer(appID app.ApplicationID, port int) *AppServer {
 	}
 
 	server := &AppServer{
-		Server: httpServer,
-		AppID:  appID,
-		environment: env,
+		Server:      httpServer,
+		AppID:       appID,
 	}
 
 	return server
@@ -233,12 +219,21 @@ func (srv *AppServer) Start() {
 
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources for %s environment", srv.environment)
 
+	err := xray.Configure(xray.Config{
+		DaemonAddr:     "xray-service.default:2000",
+		ServiceVersion: os.Getenv(app.AppVersionEnv),
+	})
+
+	if err != nil {
+		log.FatalfNoContext(srv.AppID, component, "Failed to configure AWS X-Ray configuration, %s", err)
+	}
+
 	srv.addVersionHandler()
 	srv.addHealthHandler()
 
 	if srv.initializeFunc != nil {
 
-		err := srv.initializeFunc(srv)
+		err = srv.initializeFunc(srv)
 
 		if err != nil {
 			log.FatalfNoContext(srv.AppID, component, "Failed to initialize resources, %s", err)
@@ -416,12 +411,7 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 			log.Printf(ctx, component, "Request %s %s", r.Method, r.RequestURI)
 		}
 
-		if srv.environment == app.ProductionEnvironment {
-			xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), next).ServeHTTP(w, r)
-		} else {
-			next.ServeHTTP(w,r)
-		}
-
+		xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), next).ServeHTTP(w, r)
 
 	}
 }

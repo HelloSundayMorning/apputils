@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -11,6 +12,8 @@ import (
 func TestAppServer_AddAuthorizedRoute(t *testing.T) {
 
 	srv := NewServer("APPID", 8000)
+
+	srv.environment = app.StagingEnvironment
 
 	err := srv.AddAuthorizedRoute("/", "GET", []string{"ROLE1", "ROLE2"}, func(writer http.ResponseWriter, request *http.Request) {
 
