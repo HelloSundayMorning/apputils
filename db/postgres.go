@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"github.com/aws/aws-xray-sdk-go/xray"
 	_ "github.com/lib/pq"
 )
 
@@ -24,7 +25,8 @@ func NewPostgresDB(host, user, pw, dbName string) (pgDb *PostgresDB, err error) 
 
 	dataSource := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", host, user, pw, dbName)
 
-	db, err := sql.Open("postgres", dataSource)
+	// Here we Open connection to the database using AWS XRay SQL context. Same as sql.Open but wrapped in the XRay lib
+	db, err := xray.SQLContext("postgres", dataSource)
 
 	if err != nil {
 		return pgDb, err
@@ -42,7 +44,8 @@ func NewPostgresDBWithPort(host, user, pw, dbName, port string) (pgDb *PostgresD
 
 	dataSource := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", host, user, pw, dbName, port)
 
-	db, err := sql.Open("postgres", dataSource)
+	// Here we Open connection to the database using AWS XRay SQL context. Same as sql.Open but wrapped in the XRay lib
+	db, err := xray.SQLContext("postgres", dataSource)
 
 	if err != nil {
 		return pgDb, err

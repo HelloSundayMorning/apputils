@@ -49,6 +49,12 @@ const (
 // Create a new Application Server instance.
 func NewServer(appID app.ApplicationID, port int) *AppServer {
 
+	env := os.Getenv(app.AppEnvironmentEnv)
+
+	if env != app.StagingEnvironment && env != app.ProductionEnvironment {
+		log.FatalfNoContext(appID, component, "Cannot create a new server, env variable %s invalid. Expected %s | %s | %s", app.AppEnvironmentEnv, app.LocalEnvironment, app.StagingEnvironment, app.ProductionEnvironment)
+	}
+
 	router := mux.NewRouter()
 
 	router.Use()
@@ -59,8 +65,9 @@ func NewServer(appID app.ApplicationID, port int) *AppServer {
 	}
 
 	server := &AppServer{
-		Server:      httpServer,
-		AppID:       appID,
+		Server: httpServer,
+		AppID:  appID,
+		environment: env,
 	}
 
 	return server
@@ -82,6 +89,28 @@ func NewServerWithInitialization(appID app.ApplicationID, port int, initializeFu
 	return server
 }
 
+// EnableAWSXrayTracing
+// Set env variable AWS_XRAY_SDK_DISABLED to false to enable AWS XRay Tracing
+// Must be called before server.Start()
+func (srv *AppServer) EnableAWSXrayTracing() {
+	err := os.Setenv(app.AwsXrayDisableEnv, "FALSE")
+
+	if err != nil {
+		log.FatalfNoContext(srv.AppID, component, "Error setting env variable %s, %s", app.AwsXrayDisableEnv, err)
+	}
+}
+
+// DisableAWSXrayTracing
+// Set env variable AWS_XRAY_SDK_DISABLED to true to disable AWS XRay Tracing
+// Must be called before server.Start()
+func (srv *AppServer) DisableAWSXrayTracing() {
+	err := os.Setenv(app.AwsXrayDisableEnv, "TRUE")
+
+	if err != nil {
+		log.FatalfNoContext(srv.AppID, component, "Error setting env variable %s, %s", app.AwsXrayDisableEnv, err)
+	}
+}
+
 // AddRoute
 // Add http route to the server with a method.
 // The path is added after the server appID ie. /appID/path
@@ -99,7 +128,7 @@ func (srv *AppServer) AddRoute(path, method string, handler http.HandlerFunc) er
 	return nil
 }
 
-// AddRoute
+// AddRouteNoAppID
 // Add http route to the server with a method.
 // The path is added without appID ie. /path
 // path - the HTTP path route
@@ -219,6 +248,12 @@ func (srv *AppServer) Start() {
 
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources for %s environment", srv.environment)
 
+	// Here we disable AWS Xray when not in production env
+	if srv.environment == app.ProductionEnvironment {
+		srv.DisableAWSXrayTracing()
+	}
+
+	// Configuring AWS Xray
 	err := xray.Configure(xray.Config{
 		DaemonAddr:     "xray-service.default:2000",
 		ServiceVersion: os.Getenv(app.AppVersionEnv),
@@ -411,6 +446,7 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 			log.Printf(ctx, component, "Request %s %s", r.Method, r.RequestURI)
 		}
 
+		// Here wrapping request in a AWS XRay segment handler to trace the Request
 		xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), next).ServeHTTP(w, r)
 
 	}
