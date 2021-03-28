@@ -8,6 +8,7 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
+	"github.com/HelloSundayMorning/apputils/tracing"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/gofrs/uuid"
 	gHandlers "github.com/gorilla/handlers"
@@ -447,7 +448,11 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 		}
 
 		// Here wrapping request in a AWS XRay segment handler to trace the Request
-		xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), next).ServeHTTP(w, r)
+		xRayHandler := xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), next)
+
+		tracing.AddTracingAnnotationFromCtx(ctx)
+
+		xRayHandler.ServeHTTP(w, r)
 
 	}
 }
