@@ -5,6 +5,7 @@ import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
+	"github.com/HelloSundayMorning/apputils/tracing"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/gofrs/uuid"
 
@@ -452,6 +453,8 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 	ctx := appctx.NewContextFromDelivery(rabbit.AppID, delivery)
 
 	ctx, seg := xray.BeginSegment(ctx, string(rabbit.AppID))
+
+	tracing.AddTracingAnnotationFromCtx(ctx)
 
 	err := processFunc(ctx, delivery.Body, delivery.ContentType)
 

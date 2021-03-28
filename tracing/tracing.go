@@ -20,6 +20,8 @@ func DefineTracingSegment(ctx context.Context, segmentName string, funcTracingSe
 
 	_, subSeg := xray.BeginSubsegment(ctx, segmentName)
 
+	AddTracingAnnotationFromCtx(ctx)
+
 	funcTracingSegment(ctx)
 
 	subSeg.Close(nil)
