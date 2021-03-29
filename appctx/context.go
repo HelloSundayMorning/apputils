@@ -51,12 +51,14 @@ func NewContextFromDelivery(appID app.ApplicationID, delivery amqp.Delivery) (ct
 
 func NewContext(r *http.Request) (ctx context.Context) {
 
-	ctx = context.Background()
+	ctx = r.Context()
 
 	ctx = context.WithValue(ctx, CorrelationIdHeader, r.Header.Get(CorrelationIdHeader))
 	ctx = context.WithValue(ctx, AppIdHeader, r.Header.Get(AppIdHeader))
 	ctx = context.WithValue(ctx, AuthorizedUserIDHeader, r.Header.Get(AuthorizedUserIDHeader))
 	ctx = context.WithValue(ctx, AuthorizedUserRolesHeader, r.Header.Get(AuthorizedUserRolesHeader))
+
+	r = r.WithContext(ctx)
 
 	return ctx
 

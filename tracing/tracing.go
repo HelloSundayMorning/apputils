@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	TracingSegment func(ctx context.Context)
+	TracingSegment func(ctx context.Context) (err error)
 )
 
 const (
@@ -16,18 +16,25 @@ const (
 	authUserRoles = "authUserRoles"
 )
 
-func DefineTracingSegment(ctx context.Context, segmentName string, funcTracingSegment TracingSegment) {
+// DefineTracingSegment
+// Helper function allowing to define a closure for a specific code section that needs tracing
+// The section will be identified inside AWS XRay as a subsegment
+func DefineTracingSegment(ctx context.Context, segmentName string, funcTracingSegment TracingSegment) (err error){
 
 	_, subSeg := xray.BeginSubsegment(ctx, segmentName)
 
 	AddTracingAnnotationFromCtx(ctx)
 
-	funcTracingSegment(ctx)
+	err = funcTracingSegment(ctx)
 
-	subSeg.Close(nil)
+	subSeg.Close(err)
+
+	return err
 
 }
 
+// AddTracingAnnotationFromCtx
+// Add app context information to the AWS Xray segment as annotations and metadata
 func AddTracingAnnotationFromCtx(ctx context.Context) {
 
 	if ctx.Value(appctx.CorrelationIdHeader) != nil {
