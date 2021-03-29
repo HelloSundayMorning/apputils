@@ -52,7 +52,7 @@ func NewServer(appID app.ApplicationID, port int) *AppServer {
 
 	env := os.Getenv(app.AppEnvironmentEnv)
 
-	if env != app.StagingEnvironment && env != app.ProductionEnvironment {
+	if env != app.LocalEnvironment && env != app.StagingEnvironment && env != app.ProductionEnvironment {
 		log.FatalfNoContext(appID, component, "Cannot create a new server, env variable %s invalid. Expected %s | %s | %s", app.AppEnvironmentEnv, app.LocalEnvironment, app.StagingEnvironment, app.ProductionEnvironment)
 	}
 
