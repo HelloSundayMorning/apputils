@@ -462,6 +462,8 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 
 		log.Errorf(ctx, component, "Error handling delivery, %s", err)
 
+		seg.Close(err)
+
 		if delivery.Redelivered {
 			log.Printf(ctx, component, "2nd attempt failure. Dead-letter delivery, %s", err)
 			err = delivery.Nack(false, false)
@@ -474,7 +476,6 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 			log.Errorf(ctx, component, "Error while Nack delivery, %s", err)
 		}
 
-		seg.Close(err)
 
 		return
 	}
@@ -485,7 +486,7 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 		log.Errorf(ctx, component, "Error while Ack delivery, %s", err)
 	}
 
-	seg.Close(err)
+	seg.Close(nil)
 }
 
 func formQueueName(appID app.ApplicationID, topic string) string {
