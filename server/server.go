@@ -258,7 +258,7 @@ func (srv *AppServer) Start() {
 
 	// Configuring AWS Xray
 	err := xray.Configure(xray.Config{
-		DaemonAddr:     "xray-service.default:2000",
+		DaemonAddr:     os.Getenv(app.AwsXrayHostEnv),
 		ServiceVersion: os.Getenv(app.AppVersionEnv),
 	})
 
