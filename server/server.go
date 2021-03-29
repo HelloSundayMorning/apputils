@@ -263,7 +263,8 @@ func (srv *AppServer) Start() {
 	})
 
 	if err != nil {
-		log.FatalfNoContext(srv.AppID, component, "Failed to configure AWS X-Ray configuration, %s", err)
+		log.PrintfNoContext(srv.AppID, component, "Failed to configure AWS X-Ray configuration, %s. Proceeding with AWS XRay disabled", err)
+		srv.DisableAWSXrayTracing()
 	}
 
 	srv.addVersionHandler()
