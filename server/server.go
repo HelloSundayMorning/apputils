@@ -272,9 +272,16 @@ func (srv *AppServer) Start() {
 
 	if srv.initializeFunc != nil {
 
+		id, _ := uuid.NewV4()
+
+		ctx := appctx.NewContextFromValues(srv.AppID, id.String())
+
+		ctx, seg := xray.BeginSegment(ctx, string(srv.AppID))
+
 		err = srv.initializeFunc(srv)
 
 		if err != nil {
+			seg.Close(err)
 			log.FatalfNoContext(srv.AppID, component, "Failed to initialize resources, %s", err)
 		}
 
@@ -290,6 +297,8 @@ func (srv *AppServer) Start() {
 
 			srv.Handler = gHandlers.CORS(headersOk, originsOk, methodsOk, credOK, ageOK)(srv.Handler)
 		}
+
+		seg.Close(err)
 	}
 
 	log.PrintfNoContext(srv.AppID, component, "Starting app server %s", srv.AppID)
