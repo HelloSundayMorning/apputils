@@ -249,8 +249,10 @@ func (srv *AppServer) Start() {
 
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources for %s environment", srv.environment)
 
-	// Here we disable AWS Xray when not in production env
-	if srv.environment == app.ProductionEnvironment {
+	// TODO: Here we disable AWS Xray when not in production env (testing in staging now)
+	if srv.environment == app.StagingEnvironment {
+		srv.EnableAWSXrayTracing()
+	} else {
 		srv.DisableAWSXrayTracing()
 	}
 
