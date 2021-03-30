@@ -238,6 +238,40 @@ func (srv *AppServer) NewRequestWithContext(ctx context.Context, method, url str
 	return newR, nil
 }
 
+func (srv *AppServer) configureAwsXray() {
+
+	switch srv.environment {
+	case app.StagingEnvironment:
+		if os.Getenv(app.AwsXrayHostEnv) == "" {
+			srv.DisableAWSXrayTracing()
+			log.PrintfNoContext(srv.AppID, component, "Env var %s not found. Disabling AWS XRay", app.AwsXrayHostEnv)
+
+			return
+		}
+
+		// Configuring AWS Xray
+		err := xray.Configure(xray.Config{
+			DaemonAddr:     os.Getenv(app.AwsXrayHostEnv),
+			ServiceVersion: os.Getenv(app.AppVersionEnv),
+		})
+
+		if err != nil {
+			log.PrintfNoContext(srv.AppID, component, "Failed to configure AWS X-Ray configuration, %s. Proceeding with AWS XRay disabled", err)
+			srv.DisableAWSXrayTracing()
+			return
+		}
+
+		log.PrintfNoContext(srv.AppID, component, "AWS XRay successfully configured.")
+
+		srv.EnableAWSXrayTracing()
+
+	default:
+		srv.DisableAWSXrayTracing()
+
+	}
+
+}
+
 func (srv *AppServer) Start() {
 
 	sigChan := make(chan os.Signal, 1)
@@ -247,23 +281,7 @@ func (srv *AppServer) Start() {
 
 	log.PrintfNoContext(srv.AppID, component, "Initializing resources for %s environment", srv.environment)
 
-	// TODO: Here we disable AWS Xray when not in production env (testing in staging now)
-	if srv.environment == app.StagingEnvironment {
-		srv.EnableAWSXrayTracing()
-	} else {
-		srv.DisableAWSXrayTracing()
-	}
-
-	// Configuring AWS Xray
-	err := xray.Configure(xray.Config{
-		DaemonAddr:     os.Getenv(app.AwsXrayHostEnv),
-		ServiceVersion: os.Getenv(app.AppVersionEnv),
-	})
-
-	if err != nil {
-		log.PrintfNoContext(srv.AppID, component, "Failed to configure AWS X-Ray configuration, %s. Proceeding with AWS XRay disabled", err)
-		srv.DisableAWSXrayTracing()
-	}
+	srv.configureAwsXray()
 
 	srv.addVersionHandler()
 	srv.addHealthHandler()
