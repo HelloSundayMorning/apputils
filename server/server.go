@@ -241,7 +241,7 @@ func (srv *AppServer) NewRequestWithContext(ctx context.Context, method, url str
 func (srv *AppServer) configureAwsXray() {
 
 	switch srv.environment {
-	case app.StagingEnvironment:
+	case app.ProductionEnvironment:
 		if os.Getenv(app.AwsXrayHostEnv) == "" {
 			srv.DisableAWSXrayTracing()
 			log.PrintfNoContext(srv.AppID, component, "Env var %s not found. Disabling AWS XRay", app.AwsXrayHostEnv)
@@ -288,7 +288,7 @@ func (srv *AppServer) Start() {
 
 	if srv.initializeFunc != nil {
 
-		err = srv.initializeFunc(srv)
+		err := srv.initializeFunc(srv)
 
 		if err != nil {
 			log.FatalfNoContext(srv.AppID, component, "Failed to initialize resources, %s", err)

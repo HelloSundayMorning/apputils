@@ -11,6 +11,7 @@ It includes support for:
 - appSaga: Saga manager for handling sequence of events
 - Notification Manager: Manager for push notification
 - db: database impl. for postgres and mock
+- tracing: AWS Xray service tracing
 
 ### Running tests
 
