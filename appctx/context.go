@@ -9,16 +9,15 @@ import (
 )
 
 const (
-	CorrelationIdHeader           = "x-correlation-id"
-	AppIdHeader                   = "x-app-id"
-	FromAppIdHeader               = "x-from-app-id"
-	AuthorizedUserIDHeader        = "x-authorized-user-id"
-	AuthorizedUserRolesHeader     = "x-authorized-user-roles"
+	CorrelationIdHeader       = "x-correlation-id"
+	AppIdHeader               = "x-app-id"
+	FromAppIdHeader           = "x-from-app-id"
+	AuthorizedUserIDHeader    = "x-authorized-user-id"
+	AuthorizedUserRolesHeader = "x-authorized-user-roles"
+	XRayTraceIDHeader         = "x-xray-trace-id"
 
 	// Header for unauthorized api access in the pub API
-	UnauthorizedPubAccessToken    = "x-unauthorized-public-access-token"
-
-
+	UnauthorizedPubAccessToken = "x-unauthorized-public-access-token"
 )
 
 func NewContextFromDelivery(appID app.ApplicationID, delivery amqp.Delivery) (ctx context.Context) {

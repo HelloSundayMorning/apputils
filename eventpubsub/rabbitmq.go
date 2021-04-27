@@ -454,6 +454,7 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 
 	ctx, seg := xray.BeginSegment(ctx, string(rabbit.AppID))
 
+	tracing.AddCustomTracingWorkloadType(ctx, tracing.WorkloadTypeEventHandling)
 	tracing.AddTracingAnnotationFromCtx(ctx)
 
 	err := processFunc(ctx, delivery.Body, delivery.ContentType)

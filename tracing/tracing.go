@@ -8,12 +8,21 @@ import (
 
 type (
 	TracingSegment func(ctx context.Context) (err error)
+
+	WorkloadType string
 )
 
 const (
 	correlationID = "correlationID"
 	authUserID    = "authUserID"
 	authUserRoles = "authUserRoles"
+
+	workloadTypeAnnotationTitle =  "Workload Type"
+	WorkloadTypeHTTPCall =  WorkloadType("HTTP call")
+	WorkloadTypeGraphQL =  WorkloadType("GraphQL")
+	WorkloadTypeGraphQLMutation =  WorkloadType("GraphQL Mutation")
+	WorkloadTypeGraphQLQuery =  WorkloadType("GraphQL Query")
+	WorkloadTypeEventHandling =  WorkloadType("Event Handling")
 )
 
 // DefineTracingSegment
@@ -48,4 +57,10 @@ func AddTracingAnnotationFromCtx(ctx context.Context) {
 	if ctx.Value(appctx.AuthorizedUserRolesHeader) != nil {
 		_ = xray.AddMetadata(ctx, authUserRoles, ctx.Value(appctx.AuthorizedUserRolesHeader).(string))
 	}
+}
+
+func AddCustomTracingWorkloadType(ctx context.Context, wt WorkloadType) {
+
+	_ = xray.AddAnnotation(ctx, workloadTypeAnnotationTitle, string(wt))
+
 }
