@@ -18,8 +18,8 @@ const (
 	authUserRoles = "authUserRoles"
 
 	workloadTypeAnnotationTitle =  "WorkloadType"
-	WorkloadTypeHTTPCall =  WorkloadType("HTTPCall")
-	WorkloadTypeGraphQL =  WorkloadType("GraphQL")
+	WorkloadTypeHTTPCall =  WorkloadType("HttpRequest")
+	WorkloadTypeGraphQL =  WorkloadType("GraphQLRequest")
 	WorkloadTypeGraphQLMutation =  WorkloadType("GraphQLMutation")
 	WorkloadTypeGraphQLQuery =  WorkloadType("GraphQLQuery")
 	WorkloadTypeEventHandling =  WorkloadType("EventHandling")
