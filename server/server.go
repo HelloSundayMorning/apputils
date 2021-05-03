@@ -198,7 +198,6 @@ func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.Executabl
 
 	gqlServer := handler.NewDefaultServer(gqlSchema)
 
-
 	srv.router().HandleFunc(path, srv.requestInterceptor(func(writer http.ResponseWriter, request *http.Request) {
 
 		ctx := appctx.NewContext(request)
@@ -471,10 +470,12 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 		}
 
 		// Here wrapping request in a AWS XRay segment handler to trace the Request
-		xRayHandler := xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), next)
+		xRayHandler := xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			tracing.AddCustomTracingWorkloadType(ctx, tracing.WorkloadTypeHTTPCall)
+			tracing.AddTracingAnnotationFromCtx(ctx)
 
-		tracing.AddCustomTracingWorkloadType(ctx, tracing.WorkloadTypeHTTPCall)
-		tracing.AddTracingAnnotationFromCtx(ctx)
+			next.ServeHTTP(w, r)
+		}))
 
 		xRayHandler.ServeHTTP(w, r)
 
