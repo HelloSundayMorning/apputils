@@ -17,12 +17,12 @@ const (
 	authUserID    = "authUserID"
 	authUserRoles = "authUserRoles"
 
-	workloadTypeAnnotationTitle =  "Workload Type"
-	WorkloadTypeHTTPCall =  WorkloadType("HTTP call")
+	workloadTypeAnnotationTitle =  "WorkloadType"
+	WorkloadTypeHTTPCall =  WorkloadType("HTTPCall")
 	WorkloadTypeGraphQL =  WorkloadType("GraphQL")
-	WorkloadTypeGraphQLMutation =  WorkloadType("GraphQL Mutation")
-	WorkloadTypeGraphQLQuery =  WorkloadType("GraphQL Query")
-	WorkloadTypeEventHandling =  WorkloadType("Event Handling")
+	WorkloadTypeGraphQLMutation =  WorkloadType("GraphQLMutation")
+	WorkloadTypeGraphQLQuery =  WorkloadType("GraphQLQuery")
+	WorkloadTypeEventHandling =  WorkloadType("EventHandling")
 )
 
 // DefineTracingSegment
