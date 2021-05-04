@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/99designs/gqlgen/graphql/handler"
+	gqlHandlers "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
@@ -196,7 +196,7 @@ func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.Executabl
 
 	path = fmt.Sprintf("/%s%s", srv.AppID, path)
 
-	gqlServer := handler.NewDefaultServer(gqlSchema)
+	gqlServer := gqlHandlers.NewDefaultServer(gqlSchema)
 
 	srv.router().HandleFunc(path, srv.requestInterceptor(func(writer http.ResponseWriter, request *http.Request) {
 
