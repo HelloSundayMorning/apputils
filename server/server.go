@@ -470,14 +470,21 @@ func (srv *AppServer) requestInterceptor(next http.HandlerFunc) http.HandlerFunc
 		}
 
 		// Here wrapping request in a AWS XRay segment handler to trace the Request
-		xRayHandler := xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			tracing.AddCustomTracingWorkloadType(ctx, tracing.WorkloadTypeHTTPCall)
-			tracing.AddTracingAnnotationFromCtx(ctx)
-
-			next.ServeHTTP(w, r)
-		}))
+		xRayHandler := srv.newXraySegmentHandler(next)
 
 		xRayHandler.ServeHTTP(w, r)
 
 	}
+}
+
+func (srv *AppServer) newXraySegmentHandler(next http.HandlerFunc) http.Handler {
+	xRayHandler := xray.Handler(xray.NewFixedSegmentNamer(string(srv.AppID)), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := appctx.NewContext(r)
+
+		tracing.AddCustomTracingWorkloadType(ctx, tracing.WorkloadTypeHTTPCall)
+		tracing.AddTracingAnnotationFromCtx(ctx)
+
+		next.ServeHTTP(w, r)
+	}))
+	return xRayHandler
 }
