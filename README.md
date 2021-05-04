@@ -13,7 +13,17 @@ It includes support for:
 - db: database impl. for postgres and mock
 - tracing: AWS Xray service tracing
 
-### Running tests
+## Environment variables
+
+Env variables are required to run the App Server:
+
+```
+APP_VERSION : service version
+APP_ENVIRONMENT : the environment. possible values: local | staging | production
+AWS_XRAY_HOST : the AWS Xray daemon URL. If not present it's disabled.
+```
+
+## Running tests
 
 Running the applications on docker compose are needed to execute tests
 
@@ -22,7 +32,7 @@ Running the applications on docker compose are needed to execute tests
 > docker-compose up -d
 
 ```
-### Docker Compose
+## Docker Compose
 
 In docker folder there is a collection of applications needed
 for the tech stack:
@@ -42,3 +52,18 @@ for the tech stack:
 - Redis container
     - on localhost:6379
        
+## Tracing with XRay
+
+XRay tracing is only enabled in production environment by default.
+
+To Enable or disable two methods in the AppServer can be used. They must be called
+before starting the server
+
+```go
+appSrv := server.NewServerWithInitialization(model.AppID, port, initialize(rabbit, pgDB), cleanUp(rabbit))
+
+appSrv.DisableAWSXrayTracing() // Or The enable method
+
+appSrv.Start()
+
+```
