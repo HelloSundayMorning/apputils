@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/vektah/gqlparser/gqlerror"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // NewUnauthorizedError creates a new instance of Unauthorized error with the given context and message
@@ -20,17 +20,15 @@ func NewForbiddenError(ctx context.Context, message *string) *gqlerror.Error {
 	return newError(ctx, message, http.StatusForbidden)
 }
 
-func getGQLPath(ctx context.Context) []interface{} {
-	paths := graphql.GetPath(ctx)
-	iPaths := make([]interface{}, len(paths))
-	for i, path := range paths {
-		iPaths[i] = path
-	}
-	return iPaths
+// NewResourceNotFoundError creates a new instance of ResourceNotFound error with the given context and message
+// StatusResourceNotFound (4004) is used instead of http.StatusNotFound
+func NewResourceNotFoundError(ctx context.Context, message *string) *gqlerror.Error {
+
+	return newError(ctx, message, StatusResourceNotFound)
 }
 
 func newError(ctx context.Context, message *string, errorCode int) *gqlerror.Error {
-	path := getGQLPath(ctx)
+	path := graphql.GetPath(ctx)
 
 	return &gqlerror.Error{
 		Path:    path,
