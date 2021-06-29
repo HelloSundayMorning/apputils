@@ -1,8 +1,11 @@
 package tracing
 
 import (
+	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
+	"github.com/aws/aws-xray-sdk-go/header"
 	"github.com/aws/aws-xray-sdk-go/xray"
+	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 )
 
@@ -17,18 +20,22 @@ const (
 	authUserID    = "authUserID"
 	authUserRoles = "authUserRoles"
 
-	workloadTypeAnnotationTitle =  "WorkloadType"
-	WorkloadTypeHTTPCall =  WorkloadType("HttpRequest")
-	WorkloadTypeGraphQL =  WorkloadType("GraphQLRequest")
-	WorkloadTypeGraphQLMutation =  WorkloadType("GraphQLMutation")
-	WorkloadTypeGraphQLQuery =  WorkloadType("GraphQLQuery")
-	WorkloadTypeEventHandling =  WorkloadType("EventHandling")
+	workloadTypeAnnotationTitle = "WorkloadType"
+	WorkloadTypeHTTPCall        = WorkloadType("HttpRequest")
+	WorkloadTypeGraphQL         = WorkloadType("GraphQLRequest")
+	WorkloadTypeGraphQLMutation = WorkloadType("GraphQLMutation")
+	WorkloadTypeGraphQLQuery    = WorkloadType("GraphQLQuery")
+	WorkloadTypeEventHandling   = WorkloadType("EventHandling")
+
+
+	AWSXrayTraceId = "X-Amzn-Trace-Id"
+
 )
 
 // DefineTracingSegment
 // Helper function allowing to define a closure for a specific code section that needs tracing
 // The section will be identified inside AWS XRay as a subsegment
-func DefineTracingSegment(ctx context.Context, segmentName string, funcTracingSegment TracingSegment) (err error){
+func DefineTracingSegment(ctx context.Context, segmentName string, funcTracingSegment TracingSegment) (err error) {
 
 	_, subSeg := xray.BeginSubsegment(ctx, segmentName)
 
@@ -63,4 +70,44 @@ func AddCustomTracingWorkloadType(ctx context.Context, wt WorkloadType) {
 
 	_ = xray.AddAnnotation(ctx, workloadTypeAnnotationTitle, string(wt))
 
+}
+
+// GetParentSegmentTraceIDHeader
+// Return a Xray header "Root=<trace>;Parent=<seg>;Sampled=<sample>" with the trace id and parent segment information from the context
+// The context Segment info has to be added by a Xray Segment initialization called before,
+// otherwise the function will return ""
+func GetParentSegmentTraceIDHeader(ctx context.Context) (newHeader string) {
+
+	seg := xray.GetSegment(ctx)
+
+	if seg == nil {
+		return ""
+	}
+
+	return seg.DownstreamHeader().String()
+
+}
+
+// BeginSegmentFromEventDelivery
+// Return a XRay segment with the trace information and parent segment from the ampq delivery
+// This enable event handling tracing within the same Xray TraceID and connect publisher and subscribers
+// It's expected the "X-Amzn-Trace-Id" header in format "Root=<trace>;Parent=<seg>;Sampled=<sample>"
+// otherwise a new trace is started.
+func BeginSegmentFromEventDelivery(ctx context.Context, appID app.ApplicationID, delivery amqp.Delivery) (context.Context, *xray.Segment){
+
+	var seg *xray.Segment
+
+	if delivery.Headers[AWSXrayTraceId] != nil {
+		xRayTraceHeader := header.FromString(delivery.Headers[AWSXrayTraceId].(string))
+
+		ctx, seg = xray.NewSegmentFromHeader(ctx, string(appID),nil, xRayTraceHeader)
+
+	} else {
+		ctx, seg = xray.BeginSegment(ctx, string(appID))
+	}
+
+	AddCustomTracingWorkloadType(ctx, WorkloadTypeEventHandling)
+	AddTracingAnnotationFromCtx(ctx)
+
+	return ctx, seg
 }

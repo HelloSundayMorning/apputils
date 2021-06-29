@@ -14,7 +14,6 @@ const (
 	FromAppIdHeader           = "x-from-app-id"
 	AuthorizedUserIDHeader    = "x-authorized-user-id"
 	AuthorizedUserRolesHeader = "x-authorized-user-roles"
-	XRayTraceIDHeader         = "x-xray-trace-id"
 
 	// Header for unauthorized api access in the pub API
 	UnauthorizedPubAccessToken = "x-unauthorized-public-access-token"

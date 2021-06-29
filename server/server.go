@@ -46,11 +46,17 @@ const (
 	component = "server"
 )
 
+var (
+	getAppEnv = func() string {
+		return os.Getenv(app.AppEnvironmentEnv)
+	}
+)
+
 // NewServer
 // Create a new Application Server instance.
 func NewServer(appID app.ApplicationID, port int) *AppServer {
 
-	env := os.Getenv(app.AppEnvironmentEnv)
+	env := getAppEnv()
 
 	if env != app.LocalEnvironment && env != app.StagingEnvironment && env != app.ProductionEnvironment {
 		log.FatalfNoContext(appID, component, "Cannot create a new server, env variable %s invalid. Expected %s | %s | %s", app.AppEnvironmentEnv, app.LocalEnvironment, app.StagingEnvironment, app.ProductionEnvironment)

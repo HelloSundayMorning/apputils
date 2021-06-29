@@ -6,9 +6,7 @@ import (
 	"github.com/HelloSundayMorning/apputils/appctx"
 	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/HelloSundayMorning/apputils/tracing"
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/gofrs/uuid"
-
 
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
@@ -306,6 +304,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 			Headers: amqp.Table{
 				appctx.AuthorizedUserIDHeader: userID,
 				appctx.AuthorizedUserRolesHeader: userRoles,
+				tracing.AWSXrayTraceId: tracing.GetParentSegmentTraceIDHeader(ctx),
 			},
 		})
 
@@ -333,6 +332,7 @@ func (rabbit *RabbitMq) PublishToTopic(ctx context.Context, topic string, event 
 				Headers: amqp.Table{
 					appctx.AuthorizedUserIDHeader: userID,
 					appctx.AuthorizedUserRolesHeader: userRoles,
+					tracing.AWSXrayTraceId: tracing.GetParentSegmentTraceIDHeader(ctx),
 				},
 			})
 
@@ -452,10 +452,7 @@ func (rabbit *RabbitMq) handleDelivery(delivery amqp.Delivery, processFunc Proce
 
 	ctx := appctx.NewContextFromDelivery(rabbit.AppID, delivery)
 
-	ctx, seg := xray.BeginSegment(ctx, string(rabbit.AppID))
-
-	tracing.AddCustomTracingWorkloadType(ctx, tracing.WorkloadTypeEventHandling)
-	tracing.AddTracingAnnotationFromCtx(ctx)
+	ctx, seg := tracing.BeginSegmentFromEventDelivery(ctx, rabbit.AppID, delivery)
 
 	err := processFunc(ctx, delivery.Body, delivery.ContentType)
 
