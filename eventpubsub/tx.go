@@ -3,6 +3,7 @@ package eventpubsub
 import (
 	"fmt"
 	"github.com/HelloSundayMorning/apputils/appctx"
+	"github.com/HelloSundayMorning/apputils/tracing"
 	"github.com/gofrs/uuid"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
@@ -66,6 +67,7 @@ func (chTx *ChannelTx) PublishToTopic(ctx context.Context, topic string, event [
 			Headers: amqp.Table{
 				appctx.AuthorizedUserIDHeader : userID,
 				appctx.AuthorizedUserRolesHeader: userRoles,
+				tracing.AWSXrayTraceId: tracing.GetParentSegmentTraceIDHeader(ctx),
 			},
 		})
 
@@ -89,7 +91,7 @@ func (chTx *ChannelTx) Commit() (err error) {
 
 func (chTx *ChannelTx) Rollback() (err error) {
 
-	err = chTx.publishChannel.TxCommit()
+	err = chTx.publishChannel.TxRollback()
 
 	if err != nil {
 		return err

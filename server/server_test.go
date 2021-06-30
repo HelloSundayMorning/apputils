@@ -11,9 +11,11 @@ import (
 
 func TestAppServer_AddAuthorizedRoute(t *testing.T) {
 
-	srv := NewServer("APPID", 8000)
+	getAppEnv = func() string {
+		return app.LocalEnvironment
+	}
 
-	srv.environment = app.StagingEnvironment
+	srv := NewServer("APPID", 8000)
 
 	err := srv.AddAuthorizedRoute("/", "GET", []string{"ROLE1", "ROLE2"}, func(writer http.ResponseWriter, request *http.Request) {
 
