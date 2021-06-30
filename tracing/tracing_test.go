@@ -55,6 +55,7 @@ func TestBeginSegmentFromEventDelivery(t *testing.T) {
 
 	assert.Equal(t, traceID, seg.TraceID)
 	assert.Equal(t, segID, seg.ParentID)
+	assert.Equal(t, true, seg.Sampled)
 	assert.NotEqual(t, segID, seg.ID)
 }
 

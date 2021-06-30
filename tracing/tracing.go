@@ -3,10 +3,12 @@ package tracing
 import (
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
+	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/aws/aws-xray-sdk-go/header"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
+	"net/http"
 )
 
 type (
@@ -91,18 +93,35 @@ func GetParentSegmentTraceIDHeader(ctx context.Context) (newHeader string) {
 // BeginSegmentFromEventDelivery
 // Return a XRay segment with the trace information and parent segment from the ampq delivery
 // This enable event handling tracing within the same Xray TraceID and connect publisher and subscribers
-// It's expected the "X-Amzn-Trace-Id" header in format "Root=<trace>;Parent=<seg>;Sampled=<sample>"
+// It expects the "X-Amzn-Trace-Id" header in format "Root=<trace>;Parent=<seg>;Sampled=<sample>"
 // otherwise a new trace is started.
 func BeginSegmentFromEventDelivery(ctx context.Context, appID app.ApplicationID, delivery amqp.Delivery) (context.Context, *xray.Segment){
 
 	var seg *xray.Segment
 
 	if delivery.Headers[AWSXrayTraceId] != nil {
+		log.Printf(ctx, "BeginSegmentFromEventDelivery", "Received tracing header from delivery: %s", delivery.Headers[AWSXrayTraceId].(string))
+
 		xRayTraceHeader := header.FromString(delivery.Headers[AWSXrayTraceId].(string))
 
-		ctx, seg = xray.NewSegmentFromHeader(ctx, string(appID),nil, xRayTraceHeader)
+		// Here we create a dummy HTTP request to provide to XRay lib the required dependencies.
+		// It's required since the library don't understand tracing from a parent segment
+		// if it's not originating from a HTTP request.
+		// This also guarantee that the sampling rule from the parent is propagated
+		r, err := http.NewRequest("GET", "/", nil)
+
+		if err != nil {
+			// if an error occur while creating the dummy HTTP request, we just ignore it and
+			// consider no request. As consequence it will prevent the sampling rule from the parent segment
+			// to propagate to this segment
+			r = nil
+		}
+
+		ctx, seg = xray.NewSegmentFromHeader(ctx, string(appID),r, xRayTraceHeader)
 
 	} else {
+		log.Printf(ctx, "BeginSegmentFromEventDelivery", "No tracing header from delivery found")
+
 		ctx, seg = xray.BeginSegment(ctx, string(appID))
 	}
 
