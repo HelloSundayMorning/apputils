@@ -1,4 +1,4 @@
-package eventpubsub
+package appevent
 
 import (
 	"encoding/json"

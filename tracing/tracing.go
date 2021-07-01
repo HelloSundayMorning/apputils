@@ -1,8 +1,10 @@
 package tracing
 
 import (
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/appctx"
+	"github.com/HelloSundayMorning/apputils/appevent"
 	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/aws/aws-xray-sdk-go/header"
 	"github.com/aws/aws-xray-sdk-go/xray"
@@ -23,15 +25,15 @@ const (
 	authUserRoles = "authUserRoles"
 
 	workloadTypeAnnotationTitle = "WorkloadType"
+	workloadGQLPath             = "GraphQLPath"
+	workloadEventType           = "EventType"
 	WorkloadTypeHTTPCall        = WorkloadType("HttpRequest")
 	WorkloadTypeGraphQL         = WorkloadType("GraphQLRequest")
 	WorkloadTypeGraphQLMutation = WorkloadType("GraphQLMutation")
 	WorkloadTypeGraphQLQuery    = WorkloadType("GraphQLQuery")
 	WorkloadTypeEventHandling   = WorkloadType("EventHandling")
 
-
 	AWSXrayTraceId = "X-Amzn-Trace-Id"
-
 )
 
 // DefineTracingSegment
@@ -74,6 +76,16 @@ func AddCustomTracingWorkloadType(ctx context.Context, wt WorkloadType) {
 
 }
 
+func AddTracingGraphQLInfo(ctx context.Context) {
+
+	path := graphql.GetPath(ctx)
+
+	AddCustomTracingWorkloadType(ctx, WorkloadTypeGraphQL)
+
+	_ = xray.AddAnnotation(ctx, workloadGQLPath, path.String())
+
+}
+
 // GetParentSegmentTraceIDHeader
 // Return a Xray header "Root=<trace>;Parent=<seg>;Sampled=<sample>" with the trace id and parent segment information from the context
 // The context Segment info has to be added by a Xray Segment initialization called before,
@@ -95,7 +107,7 @@ func GetParentSegmentTraceIDHeader(ctx context.Context) (newHeader string) {
 // This enable event handling tracing within the same Xray TraceID and connect publisher and subscribers
 // It expects the "X-Amzn-Trace-Id" header in format "Root=<trace>;Parent=<seg>;Sampled=<sample>"
 // otherwise a new trace is started.
-func BeginSegmentFromEventDelivery(ctx context.Context, appID app.ApplicationID, delivery amqp.Delivery) (context.Context, *xray.Segment){
+func BeginSegmentFromEventDelivery(ctx context.Context, appID app.ApplicationID, delivery amqp.Delivery) (context.Context, *xray.Segment) {
 
 	var seg *xray.Segment
 
@@ -117,13 +129,17 @@ func BeginSegmentFromEventDelivery(ctx context.Context, appID app.ApplicationID,
 			r = nil
 		}
 
-		ctx, seg = xray.NewSegmentFromHeader(ctx, string(appID),r, xRayTraceHeader)
+		ctx, seg = xray.NewSegmentFromHeader(ctx, string(appID), r, xRayTraceHeader)
 
 	} else {
 		log.Printf(ctx, "BeginSegmentFromEventDelivery", "No tracing header from delivery found")
 
 		ctx, seg = xray.BeginSegment(ctx, string(appID))
 	}
+
+	event, _ := appevent.NewAppEventFromJSON(delivery.Body)
+
+	_ = xray.AddAnnotation(ctx, workloadEventType, event.EventType)
 
 	AddCustomTracingWorkloadType(ctx, WorkloadTypeEventHandling)
 	AddTracingAnnotationFromCtx(ctx)

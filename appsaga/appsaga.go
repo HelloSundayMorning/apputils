@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/HelloSundayMorning/apputils/app"
+	"github.com/HelloSundayMorning/apputils/appevent"
 	"github.com/HelloSundayMorning/apputils/db"
-	"github.com/HelloSundayMorning/apputils/eventpubsub"
 	"github.com/HelloSundayMorning/apputils/log"
 	"github.com/lib/pq"
 	"golang.org/x/net/context"
@@ -21,14 +21,14 @@ type (
 	Saga struct {
 		SagaName   string
 		SagaKey    string
-		Events     map[string]eventpubsub.AppEvent
+		Events     map[string]appevent.AppEvent
 		EventTypes []string
 		Completed  bool
 		Timestamp  int64
 	}
 
 	ISagaManager interface {
-		AddEvent(ctx context.Context, sagaKey string, appEvent eventpubsub.AppEvent) (saga Saga, err error)
+		AddEvent(ctx context.Context, sagaKey string, appEvent appevent.AppEvent) (saga Saga, err error)
 	}
 
 	SagaManager struct {
@@ -160,7 +160,7 @@ func (sagaManager *SagaManager) findSagaByKey(ctx context.Context, tx *sql.Tx, s
 
 	defer rows.Close()
 
-	userSaga.Events = make(map[string]eventpubsub.AppEvent)
+	userSaga.Events = make(map[string]appevent.AppEvent)
 
 	var eventsMapJSON json.RawMessage
 
@@ -184,7 +184,7 @@ func (sagaManager *SagaManager) findSagaByKey(ctx context.Context, tx *sql.Tx, s
 
 }
 
-func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, appEvent eventpubsub.AppEvent) (saga Saga, err error) {
+func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, appEvent appevent.AppEvent) (saga Saga, err error) {
 
 	if !sagaManager.isValidEvent(appEvent) {
 		return saga, fmt.Errorf("invalid event type %s add attempt to saga %s", appEvent.EventType, sagaManager.SagaName)
@@ -256,7 +256,7 @@ func (sagaManager *SagaManager) AddEvent(ctx context.Context, sagaKey string, ap
 	return saga, nil
 }
 
-func (sagaManager *SagaManager) processSaga(ctx context.Context, conn *sql.DB, sagaKey string, appEvent eventpubsub.AppEvent) (saga Saga, err error){
+func (sagaManager *SagaManager) processSaga(ctx context.Context, conn *sql.DB, sagaKey string, appEvent appevent.AppEvent) (saga Saga, err error){
 
 	tx, err := conn.Begin()
 
@@ -314,7 +314,7 @@ func (sagaManager *SagaManager) processSaga(ctx context.Context, conn *sql.DB, s
 
 }
 
-func (sagaManager *SagaManager) isValidEvent(appEvent eventpubsub.AppEvent) bool {
+func (sagaManager *SagaManager) isValidEvent(appEvent appevent.AppEvent) bool {
 
 	for _, eventType := range sagaManager.EventTypes {
 
