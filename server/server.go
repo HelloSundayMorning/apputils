@@ -204,17 +204,16 @@ func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.Executabl
 
 	gqlServer := gqlHandlers.NewDefaultServer(gqlSchema)
 
+	gqlServer.AroundOperations(func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
+
+		tracing.AddTracingGraphQLInfo(ctx)
+
+		return next(ctx)
+	})
+
 	srv.router().HandleFunc(path, srv.requestInterceptor(func(writer http.ResponseWriter, request *http.Request) {
 
-		ctx := appctx.NewContext(request)
-
-		log.Printf(ctx, "AddGraphQLHandler", "before: %+v", ctx)
-
-		gqlServer.ServeHTTP(writer, request.WithContext(ctx))
-
-		log.Printf(ctx, "AddGraphQLHandler", "after: %+v", ctx)
-
-		tracing.AddTracingGraphQLInfo(request.Context())
+		gqlServer.ServeHTTP(writer, request)
 
 	})).Methods("POST")
 

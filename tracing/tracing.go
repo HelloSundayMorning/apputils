@@ -80,9 +80,13 @@ func AddTracingGraphQLInfo(ctx context.Context) {
 
 	path := graphql.GetPath(ctx)
 
+	pathStr := path.String()
+
+	log.Printf(ctx, "AddTracingGraphQLInfo", "Request to GraphQL Path %s", pathStr)
+
 	AddCustomTracingWorkloadType(ctx, WorkloadTypeGraphQL)
 
-	_ = xray.AddAnnotation(ctx, workloadGQLPath, path.String())
+	_ = xray.AddAnnotation(ctx, workloadGQLPath, pathStr)
 
 }
 
