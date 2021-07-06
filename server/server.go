@@ -204,25 +204,7 @@ func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.Executabl
 
 	gqlServer := gqlHandlers.NewDefaultServer(gqlSchema)
 
-	gqlServer.AroundOperations(func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
-
-		log.Printf(ctx, "", "op: %+v", ctx)
-
-		tracing.AddTracingGraphQLInfo(ctx)
-
-		return next(ctx)
-	})
-
 	gqlServer.AroundFields(func(ctx context.Context, next graphql.Resolver) (res interface{}, err error) {
-		log.Printf(ctx, "", "fi: %+v", ctx)
-
-		tracing.AddTracingGraphQLInfo(ctx)
-		return next(ctx)
-	})
-
-	gqlServer.AroundResponses(func(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
-		log.Printf(ctx, "", "resp: %+v", ctx)
-
 		tracing.AddTracingGraphQLInfo(ctx)
 		return next(ctx)
 	})
