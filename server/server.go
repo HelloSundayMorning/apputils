@@ -208,7 +208,11 @@ func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.Executabl
 
 		ctx := appctx.NewContext(request)
 
+		log.Printf(ctx, "AddGraphQLHandler", "before: %+v", ctx)
+
 		gqlServer.ServeHTTP(writer, request.WithContext(ctx))
+
+		log.Printf(ctx, "AddGraphQLHandler", "after: %+v", ctx)
 
 		tracing.AddTracingGraphQLInfo(request.Context())
 
