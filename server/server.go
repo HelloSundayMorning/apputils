@@ -204,7 +204,7 @@ func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.Executabl
 
 	gqlServer := gqlHandlers.NewDefaultServer(gqlSchema)
 
-	gqlServer.AroundOperations(func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
+	gqlServer.AroundFields(func(ctx context.Context, next graphql.Resolver) (res interface{}, err error) {
 		tracing.AddTracingGraphQLInfo(ctx)
 		return next(ctx)
 	})

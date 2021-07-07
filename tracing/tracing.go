@@ -78,16 +78,15 @@ func AddCustomTracingWorkloadType(ctx context.Context, wt WorkloadType) {
 
 func AddTracingGraphQLInfo(ctx context.Context) {
 
-	opCtx := graphql.GetOperationContext(ctx)
+	fieldCtx := graphql.GetFieldContext(ctx)
 
-	if opCtx == nil || opCtx.Operation == nil {
+	if fieldCtx == nil || !fieldCtx.IsMethod {
 		return
 	}
 
-	opStr := opCtx.Operation.Operation
-	pathStr := opCtx.Operation.Name
+	pathStr := fieldCtx.Path().String()
 
-	log.Printf(ctx, "AddTracingGraphQLInfo", "Request to GraphQL %s %s", opStr, pathStr)
+	log.Printf(ctx, "AddTracingGraphQLInfo", "Request to GraphQL %s", pathStr)
 
 	AddCustomTracingWorkloadType(ctx, WorkloadTypeGraphQL)
 
