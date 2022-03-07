@@ -48,10 +48,10 @@ for the tech stack:
     - user: postgres
     - pw: postgresx
     - db: postgres
-    
+
 - Redis container
     - on localhost:6379
-       
+
 ## Tracing with XRay
 
 XRay tracing is only enabled in production environment by default.
@@ -67,3 +67,7 @@ appSrv.DisableAWSXrayTracing() // Or The enable method
 appSrv.Start()
 
 ```
+
+## Chat Channel Info (CCS)
+
+[channel/README](./channel/README.md)

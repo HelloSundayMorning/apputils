@@ -1,8 +1,9 @@
 package uuid
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewUuidFromSeqID(t *testing.T) {
@@ -50,4 +51,43 @@ func TestNewSeqIDFromUuid(t *testing.T) {
 	ID = "00000000-0000-0000-0000-999999999999"
 
 	assert.Equal(t, uint(999999999999), NewSeqIDFromUuid(ID))
+}
+
+func TestValidateSeqUuid(t *testing.T) {
+
+	ID := "00000000-0000-0000-0000-000000000032"
+
+	assert.Nil(t, ValidateSeqUuid(ID))
+
+	ID = "00000000-0000-0000-0000-000000001234"
+
+	assert.Nil(t, ValidateSeqUuid(ID))
+
+	ID = "00000000-0000-0000-0000-111111111234"
+
+	assert.Nil(t, ValidateSeqUuid(ID))
+
+	ID = "00000000-0000-0000-00009111111111234"
+
+	assert.Equal(t, ErrInvalidSeqUUID, ValidateSeqUuid(ID))
+
+	ID = "00000000-0000-0000-0000-11111111123"
+
+	assert.Equal(t, ErrInvalidSeqUUID, ValidateSeqUuid(ID))
+
+	ID = "0000000-0000-0000-0000-111111111234"
+
+	assert.Equal(t, ErrInvalidSeqUUID, ValidateSeqUuid(ID))
+
+	ID = "111111111234"
+
+	assert.Equal(t, ErrInvalidSeqUUID, ValidateSeqUuid(ID))
+
+	ID = "00000000-0000-0000-0000-a11111111234"
+
+	assert.Equal(t, ErrInvalidSeqUUID, ValidateSeqUuid(ID))
+
+	ID = "00000000-0000-0000-0000-e11111111234"
+
+	assert.Equal(t, ErrInvalidSeqUUID, ValidateSeqUuid(ID))
 }
