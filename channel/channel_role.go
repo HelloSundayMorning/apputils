@@ -7,7 +7,8 @@ const (
 	ChannelRoleCareNav   = "carenav"
 	ChannelRoleModerator = "moderator"
 
-	ChannelRoleMember = "member" // not in use
+	ChannelRoleMember = "member"
+
 	ChannelRoleTriage = "triage" // not in use
 
 	// a placeholder for channel roles, which is an invalid channel role

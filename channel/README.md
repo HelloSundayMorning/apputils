@@ -4,7 +4,7 @@ This package provides support for Chat Channel (CCS).
 
 ## Channel ID
 
-A valid channel ID is in the format of `<channel role>-channel_<user ID>`.
+A valid channel ID is in the format of `<channel type>_<user ID>`.
 E.g., `moderator-channel_00000000-0000-0000-0000-000000001234`
 
 Refer to the source code [channel_id.go](./channel_id.go) for detailed info.
@@ -21,7 +21,7 @@ Refer to the source code [channel_type.go](./channel_type.go) for detailed info.
 
 ## Channel Role
 
-A "channel role" is a role that is teken by a user of the chat channel.
+A "channel role" is a role that is taken by a user of the chat channel.
 
 There are four predefined channel roles (`./channel_role.go`):
 - `ChannelRoleCareNav` (`carenav`)
