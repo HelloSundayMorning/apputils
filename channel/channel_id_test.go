@@ -165,6 +165,54 @@ func TestGetChannelRoleFromChannelID(t *testing.T) {
 	}
 }
 
+func TestGetChannelTypeAndUUIDFromChannelID(t *testing.T) {
+	testCases := []struct {
+		channelIDName       string
+		expectedChannelType string
+		expectedUUID        string
+		expectedErr         error
+	}{
+		{
+			channelIDName:       "carenav-channel_00000000-0000-0000-0000-000000001234",
+			expectedChannelType: ChannelTypeCareNav,
+			expectedUUID:        "00000000-0000-0000-0000-000000001234",
+			expectedErr:         nil,
+		}, {
+			channelIDName:       "moderator-channel_00000000-0000-0000-0000-000000001234",
+			expectedChannelType: ChannelTypeModerator,
+			expectedUUID:        "00000000-0000-0000-0000-000000001234",
+			expectedErr:         nil,
+		}, {
+			channelIDName:       "member-channel_00000000-0000-0000-0000-000000001234",
+			expectedChannelType: ChannelTypeMember,
+			expectedUUID:        "00000000-0000-0000-0000-000000001234",
+			expectedErr:         nil,
+		}, {
+			channelIDName:       "moderator-channel_1234",
+			expectedChannelType: "",
+			expectedUUID:        "",
+			expectedErr:         uuid.ErrInvalidSeqUUID,
+		}, {
+			channelIDName:       "moderator_00000000-0000-0000-0000-000000001234",
+			expectedChannelType: "",
+			expectedUUID:        "",
+			expectedErr:         ErrInvalidChannelType,
+		}, {
+			channelIDName:       "00000000-0000-0000-0000-000000001234",
+			expectedChannelType: "",
+			expectedUUID:        "",
+			expectedErr:         ErrInvalidChannelID,
+		},
+	}
+
+	for _, tc := range testCases {
+		actualChannelType, actualUUID, actualErr := GetChannelTypeAndUUIDFromChannelID(tc.channelIDName)
+		assert.Equal(t, tc.expectedChannelType, actualChannelType)
+		assert.Equal(t, tc.expectedUUID, actualUUID)
+		assert.Equal(t, tc.expectedErr, actualErr)
+	}
+}
+
 func TestGetChannelIDPartsFromChannelID(t *testing.T) {
 	testCases := []struct {
 		channelIDName       string

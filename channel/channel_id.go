@@ -71,6 +71,26 @@ func GetChannelRoleFromChannelID(channelID string) (string, error) {
 	return channelRole, nil
 }
 
+// GetChannelTypeAndUUIDFromChannelID returns the channel type and channel user ID. It returns `ErrInvalidChannelID` or `ErrInvalidSeqUUID` is the channel type or the user ID is invalid.
+func GetChannelTypeAndUUIDFromChannelID(channelID string) (string, string, error) {
+	parts := strings.Split(channelID, ChannelIDSeperator)
+	if len(parts) != 2 {
+		return "", "", ErrInvalidChannelID
+	}
+
+	channelType, _, err := ValidateChannelType(parts[0])
+	if err != nil {
+		return "", "", err
+	}
+
+	err = uuid.ValidateSeqUuid(parts[1])
+	if err != nil {
+		return "", "", err
+	}
+
+	return channelType, parts[1], nil
+}
+
 // GetChannelIDPartsFromChannelID splits channelID and returns the channel role and user ID.
 func GetChannelIDPartsFromChannelID(channelID string) (string, string, error) {
 	parts := strings.Split(channelID, ChannelIDSeperator)
