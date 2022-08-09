@@ -170,15 +170,15 @@ func (manager *AppMobileNotificationManager) store(ctx context.Context, token To
 }
 
 // findTokens returns the tokens of userID
-// or all tokens if passing ""
-func (manager *AppMobileNotificationManager) findTokens(userID string) (tokens []Token, err error) {
+// or all tokens if passing nil
+func (manager *AppMobileNotificationManager) findTokens(userID *string) (tokens []Token, err error) {
 
 	var rows *sql.Rows
 
-	if userID == "" {
+	if userID == nil || *userID == "" {
 		rows, err = manager.sqlDb.GetDB().Query(findAllTokens)
 	} else {
-		rows, err = manager.sqlDb.GetDB().Query(findTokenByUser, userID)
+		rows, err = manager.sqlDb.GetDB().Query(findTokenByUser, *userID)
 	}
 
 	if err != nil {
@@ -208,7 +208,7 @@ func (manager *AppMobileNotificationManager) findTokens(userID string) (tokens [
 
 func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, userID, title, message string) (err error) {
 
-	tokens, err := manager.findTokens(userID)
+	tokens, err := manager.findTokens(&userID)
 
 	if err != nil {
 		log.Errorf(ctx, component, "Error finding tokens for user %s", userID)
@@ -244,7 +244,7 @@ func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, user
 
 func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Context, userID, title, message string, customData map[string]interface{}) (err error) {
 
-	tokens, err := manager.findTokens(userID)
+	tokens, err := manager.findTokens(&userID)
 
 	if err != nil {
 		log.Errorf(ctx, component, "Error finding tokens for user %s", userID)
@@ -258,7 +258,7 @@ func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Co
 
 func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx context.Context, title, message string, customData map[string]interface{}) (err error) {
 
-	tokens, err := manager.findTokens("")
+	tokens, err := manager.findTokens(nil)
 
 	if err != nil {
 		log.Errorf(ctx, component, "Error finding tokens for broadcasting (%s)", err)
