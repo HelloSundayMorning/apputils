@@ -1,6 +1,9 @@
 package notification
 
 import (
+	"database/sql"
+	"time"
+
 	"github.com/HelloSundayMorning/apputils/app"
 	"github.com/HelloSundayMorning/apputils/db"
 	"github.com/HelloSundayMorning/apputils/log"
@@ -8,7 +11,6 @@ import (
 	apns "github.com/sideshow/apns2"
 	"github.com/sideshow/apns2/payload"
 	"golang.org/x/net/context"
-	"time"
 )
 
 type (
@@ -49,13 +51,16 @@ const (
 
 	insertToken = `INSERT INTO notification_token (user_id, token, device_os, created_at)
                                 VALUES ($1, $2, $3, $4)
-                                ON CONFLICT (user_id, token, device_os) 
+                                ON CONFLICT (user_id, token, device_os)
                                 DO UPDATE SET
                                 created_at = $4`
 
-	findToken = `SELECT user_id, token, device_os, created_at
+	findTokenByUser = `SELECT user_id, token, device_os, created_at
                     FROM notification_token
                     WHERE user_id = $1`
+
+	findAllTokens = `SELECT user_id, token, device_os, created_at
+                    FROM notification_token`
 )
 
 func NewMobileNotificationManagerApp(appID app.ApplicationID, sqlDb db.AppSqlDb, iOsClient *apns.Client, fcmClient *fcm.Sender) (manager *AppMobileNotificationManager, err error) {
@@ -164,9 +169,17 @@ func (manager *AppMobileNotificationManager) store(ctx context.Context, token To
 
 }
 
-func (manager *AppMobileNotificationManager) findTokensByUser(userID string) (tokens []Token, err error) {
+// findTokens returns the tokens of userID
+// or all tokens if passing nil
+func (manager *AppMobileNotificationManager) findTokens(userID *string) (tokens []Token, err error) {
 
-	rows, err := manager.sqlDb.GetDB().Query(findToken, userID)
+	var rows *sql.Rows
+
+	if userID == nil || *userID == "" {
+		rows, err = manager.sqlDb.GetDB().Query(findAllTokens)
+	} else {
+		rows, err = manager.sqlDb.GetDB().Query(findTokenByUser, *userID)
+	}
 
 	if err != nil {
 		return tokens, err
@@ -195,7 +208,12 @@ func (manager *AppMobileNotificationManager) findTokensByUser(userID string) (to
 
 func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, userID, title, message string) (err error) {
 
-	tokens, err := manager.findTokensByUser(userID)
+	tokens, err := manager.findTokens(&userID)
+
+	if err != nil {
+		log.Errorf(ctx, component, "Error finding tokens for user %s", userID)
+		return err
+	}
 
 	log.Printf(ctx, component, "Found %d tokens for user %s. Trying to send all", len(tokens), userID)
 
@@ -226,9 +244,35 @@ func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, user
 
 func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Context, userID, title, message string, customData map[string]interface{}) (err error) {
 
-	tokens, err := manager.findTokensByUser(userID)
+	tokens, err := manager.findTokens(&userID)
+
+	if err != nil {
+		log.Errorf(ctx, component, "Error finding tokens for user %s", userID)
+		return err
+	}
 
 	log.Printf(ctx, component, "Found %d tokens for user %s. Trying to send all", len(tokens), userID)
+
+	return manager.sendDataNotification(ctx, tokens, title, message, customData)
+}
+
+func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx context.Context, title, message string, customData map[string]interface{}) (err error) {
+
+	tokens, err := manager.findTokens(nil)
+
+	if err != nil {
+		log.Errorf(ctx, component, "Error finding tokens for broadcasting (%s)", err)
+		return err
+	}
+
+	log.Printf(ctx, component, "Found %d tokens for broadcasting. Trying to send all", len(tokens))
+
+	return manager.sendDataNotification(ctx, tokens, title, message, customData)
+}
+
+func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Context, tokens []Token, title, message string, customData map[string]interface{}) (err error) {
+
+	var errTokens []Token
 
 	for _, token := range tokens {
 
@@ -239,17 +283,22 @@ func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Co
 			err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				return err
+				errTokens = append(errTokens, token)
 			}
 
 		case Android:
 			err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				return err
+				errTokens = append(errTokens, token)
 			}
 		}
 
+	}
+
+	if len(errTokens) > 0 {
+		// Users might delete app and reinstall => that'll create new token and the existed one will be invalid.
+		log.Printf(ctx, component, "Failed to send notification to tokens %#v\n", errTokens)
 	}
 
 	return nil
