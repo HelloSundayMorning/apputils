@@ -13,6 +13,7 @@ const (
 )
 
 var ErrInvalidSeqUUID = errors.New("invalid seq UUID")
+var ErrInvalidUUID = errors.New("invalid UUID")
 
 func NewUuidFromSeqID(ID uint) string {
 
@@ -51,8 +52,8 @@ func NewUuid() string {
 }
 
 // ValidateSeqUuid checks if the given uuid has '00000000-0000-0000-0000-' as its prefix, and its the other part is convertable into an int.
-func ValidateSeqUuid(uuid string) error {
-	uuidFormatRunes, uuidRune := []rune(uuidFormat), []rune(uuid)
+func ValidateSeqUuid(seqUUID string) error {
+	uuidFormatRunes, uuidRune := []rune(uuidFormat), []rune(seqUUID)
 
 	if len(uuidFormatRunes) != len(uuidRune) {
 		return ErrInvalidSeqUUID
@@ -68,6 +69,15 @@ func ValidateSeqUuid(uuid string) error {
 	_, err := strconv.Atoi(uuidSeq)
 	if err != nil {
 		return ErrInvalidSeqUUID
+	}
+	return nil
+}
+
+// ValidateUuid checks if the given uuid is in the format of 'ba0dd379-e482-4698-9a5d-2433b3c84a0a'
+func ValidateUuid(stringUUID string) error {
+	_, err := uuid.FromString(stringUUID)
+	if err != nil {
+		return ErrInvalidUUID
 	}
 	return nil
 }
