@@ -91,3 +91,26 @@ func TestValidateSeqUuid(t *testing.T) {
 
 	assert.Equal(t, ErrInvalidSeqUUID, ValidateSeqUuid(ID))
 }
+
+func TestValidateUuid(t *testing.T) {
+
+	ID := "00000000-0000-0000-0000-000000000032"
+
+	assert.Nil(t, ValidateUuid(ID))
+
+	ID = "ba0dd379-e482-4698-9a5d-2433b3c84a0a"
+
+	assert.Nil(t, ValidateUuid(ID))
+
+	ID = "abcdefgh-abcd-abcd-abcd-abcdefghijkh"
+
+	assert.Equal(t, ErrInvalidUUID, ValidateUuid(ID))
+
+	ID = "ba0dd379-e482-2433b3c84a0a"
+
+	assert.Equal(t, ErrInvalidUUID, ValidateUuid(ID))
+
+	ID = ""
+
+	assert.Equal(t, ErrInvalidUUID, ValidateUuid(ID))
+}
