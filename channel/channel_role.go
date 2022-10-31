@@ -7,6 +7,8 @@ const (
 	ChannelRoleCareNav   = "carenav"
 	ChannelRoleModerator = "moderator"
 
+	ChannelRoleAutoResponder = "autoresponder"
+
 	ChannelRoleMember = "member"
 
 	ChannelRoleTriage = "triage" // not in use
@@ -28,6 +30,8 @@ func GetStandardChannelRole(role string) string {
 		return ChannelRoleModerator
 	case ChannelRoleTriage:
 		return ChannelRoleTriage
+	case ChannelRoleAutoResponder:
+		return ChannelRoleAutoResponder
 	default:
 		return ChannelRoleUnknown
 	}

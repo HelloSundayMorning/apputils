@@ -31,6 +31,9 @@ func TestGetStandardChannelRole(t *testing.T) {
 			roleName:     "unknown",
 			expectedRole: ChannelRoleUnknown,
 		}, {
+			roleName:     "autoresponder",
+			expectedRole: ChannelRoleAutoResponder,
+		}, {
 			roleName:     "hello",
 			expectedRole: ChannelRoleUnknown,
 		},
