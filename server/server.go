@@ -3,6 +3,13 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/99designs/gqlgen/graphql"
 	gqlHandlers "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/HelloSundayMorning/apputils/app"
@@ -13,13 +20,8 @@ import (
 	"github.com/gofrs/uuid"
 	gHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"golang.org/x/net/context"
-	"io"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 type (
@@ -34,6 +36,7 @@ type (
 	// cleanup are provided so the life cycle of other objects can be added to it.
 	AppServer struct {
 		*http.Server
+		gqlServer      *gqlHandlers.Server
 		AppID          app.ApplicationID // Unique identifier for the application
 		initializeFunc Initialize        // Custom initialization function
 		cleanupFunc    CleanUp           // Custom cleanup function
@@ -215,9 +218,32 @@ func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.Executabl
 
 	})).Methods("POST")
 
+	srv.gqlServer = gqlServer
+
 	log.PrintfNoContext(srv.AppID, component, "Added GraphQL route %s %s for app %s", "POST", path, srv.AppID)
 
 	return nil
+}
+
+// SetGQLErrorPresenter
+// Sets the ErrorPresenter for the GQL handler
+// ref: https://gqlgen.com/reference/errors/#hooks
+//
+// ctx - the error context
+// presenterFunc - a function that takes a context.Context and the original error, and returns the error to be presented
+func (srv *AppServer) SetGQLErrorPresenter(presenterFunc func(ctx context.Context, originalErr error) (presentedErr error)) {
+
+	srv.gqlServer.SetErrorPresenter(func(ctx context.Context, originalErr error) *gqlerror.Error {
+		presentedErr := graphql.DefaultErrorPresenter(ctx, originalErr)
+
+		if presenterFunc != nil {
+			err := presenterFunc(ctx, originalErr)
+			presentedErr.Message = err.Error()
+		}
+
+		return presentedErr
+	})
+
 }
 
 func (srv *AppServer) Vars(r *http.Request) map[string]string {
