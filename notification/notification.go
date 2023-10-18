@@ -2,6 +2,7 @@ package notification
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/HelloSundayMorning/apputils/app"
@@ -21,6 +22,13 @@ type (
 		Token     string
 		DeviceOS  MobileOS
 		CreatedAt int64
+		HasError  bool
+		ErrorMsg  string
+	}
+
+	NotificationErrors struct {
+		Token    Token
+		ErrorMsg string
 	}
 
 	MobileNotificationManager interface {
@@ -42,25 +50,30 @@ const (
 
 	component = "mobileNotificationManager"
 
-	createTokenTable = `CREATE TABLE IF NOT EXISTS notification_token (
-									 user_id                    uuid                      not null,
-									 token                      varchar(500)              not null,
-									 device_os                  varchar(50)               not null,
-                                     created_at                 bigint                    not null,
-                                     PRIMARY KEY (user_id, token, device_os));`
+	createTokenTable = `CREATE TABLE IF NOT EXISTS notification_token
+	(
+		user_id    uuid         not null,
+		token      varchar(500) not null,
+		device_os  varchar(50)  not null,
+		created_at bigint       not null,
+		has_error  boolean      not null default false,
+		error_msg  varchar(500) null,
+		PRIMARY KEY (user_id, token, device_os)
+	);`
 
-	insertToken = `INSERT INTO notification_token (user_id, token, device_os, created_at)
-                                VALUES ($1, $2, $3, $4)
-                                ON CONFLICT (user_id, token, device_os)
-                                DO UPDATE SET
-                                created_at = $4`
+	insertToken = `INSERT INTO notification_token (user_id, token, device_os, created_at, has_error, error_msg)
+					VALUES ($1, $2, $3, $4, $5, $6)
+					ON CONFLICT (user_id, token, device_os)
+						DO UPDATE SET created_at = $4,
+									has_error  = $5,
+									error_msg  = $6;`
 
-	findTokenByUser = `SELECT user_id, token, device_os, created_at
-                    FROM notification_token
-                    WHERE user_id = $1`
+	findValidTokenByUser = `SELECT user_id, token, device_os, created_at, has_error, error_msg
+					FROM notification_token
+					WHERE user_id = $1 AND has_error = false;`
 
-	findAllTokens = `SELECT user_id, token, device_os, created_at
-                    FROM notification_token`
+	findAllValidTokens = `SELECT user_id, token, device_os, created_at, has_error, error_msg
+						FROM notification_token WHERE has_error = false;`
 )
 
 func NewMobileNotificationManagerApp(appID app.ApplicationID, sqlDb db.AppSqlDb, iOsClient *apns.Client, fcmClient *fcm.Sender) (manager *AppMobileNotificationManager, err error) {
@@ -126,6 +139,8 @@ func (manager *AppMobileNotificationManager) AddNotificationToken(ctx context.Co
 		Token:     token,
 		DeviceOS:  deviceOs,
 		CreatedAt: time.Now().UTC().UnixNano(),
+		HasError:  false,
+		ErrorMsg:  "",
 	})
 
 	if err != nil {
@@ -152,7 +167,7 @@ func (manager *AppMobileNotificationManager) store(ctx context.Context, token To
 		return err
 	}
 
-	_, err = stmt.Exec(token.UserID, token.Token, token.DeviceOS, token.CreatedAt)
+	_, err = stmt.Exec(token.UserID, token.Token, token.DeviceOS, token.CreatedAt, token.HasError, token.ErrorMsg)
 
 	if err != nil {
 		_ = tx.Rollback()
@@ -176,9 +191,9 @@ func (manager *AppMobileNotificationManager) findTokens(userID *string) (tokens 
 	var rows *sql.Rows
 
 	if userID == nil || *userID == "" {
-		rows, err = manager.sqlDb.GetDB().Query(findAllTokens)
+		rows, err = manager.sqlDb.GetDB().Query(findAllValidTokens)
 	} else {
-		rows, err = manager.sqlDb.GetDB().Query(findTokenByUser, *userID)
+		rows, err = manager.sqlDb.GetDB().Query(findValidTokenByUser, *userID)
 	}
 
 	if err != nil {
@@ -193,7 +208,7 @@ func (manager *AppMobileNotificationManager) findTokens(userID *string) (tokens 
 
 		var token Token
 
-		err = rows.Scan(&token.UserID, &token.Token, &token.DeviceOS, &token.CreatedAt)
+		err = rows.Scan(&token.UserID, &token.Token, &token.DeviceOS, &token.CreatedAt, &token.HasError, &token.ErrorMsg)
 
 		if err != nil {
 			return tokens, err
@@ -272,7 +287,7 @@ func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx conte
 
 func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Context, tokens []Token, title, message string, customData map[string]interface{}) (err error) {
 
-	var errTokens []Token
+	var notificationErrors []NotificationErrors
 
 	for _, token := range tokens {
 
@@ -283,22 +298,26 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 			err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				errTokens = append(errTokens, token)
+				notificationErrors = append(notificationErrors, NotificationErrors{Token: token, ErrorMsg: err.Error()})
 			}
 
 		case Android:
 			err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				errTokens = append(errTokens, token)
+				notificationErrors = append(notificationErrors, NotificationErrors{Token: token, ErrorMsg: err.Error()})
 			}
+
+		default:
+			err = fmt.Errorf("invalid DeviceOS: %s", token.DeviceOS)
+			notificationErrors = append(notificationErrors, NotificationErrors{Token: token, ErrorMsg: err.Error()})
 		}
 
 	}
 
-	if len(errTokens) > 0 {
+	if len(notificationErrors) > 0 {
 		// Users might delete app and reinstall => that'll create new token and the existed one will be invalid.
-		log.Printf(ctx, component, "Failed to send notification to tokens %#v\n", errTokens)
+		log.Printf(ctx, component, "Failed to send notification to tokens %#v\n", notificationErrors)
 	}
 
 	return nil
