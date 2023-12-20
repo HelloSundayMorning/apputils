@@ -1,6 +1,9 @@
 package notification
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type (
 	NotificationErrorReason string
@@ -16,13 +19,40 @@ type (
 )
 
 const (
-	IOSUnregistered   = NotificationErrorReason("Unregistered")
-	IOSBadDeviceToken = NotificationErrorReason("BadDeviceToken")
+	DefaultResponseReason = "DefaultReason"
 
-	AndroidMismatchSenderId    = NotificationErrorReason("MismatchSenderId")
-	AndroidNotRegistered       = NotificationErrorReason("NotRegistered")
-	AndroidInvalidRegistration = NotificationErrorReason("InvalidRegistration")
-	AndroidInternalServerError = NotificationErrorReason("InternalServerError")
+	IOSResponseReasonUnregistered   = "Unregistered"
+	IOSResponseReasonBadDeviceToken = "BadDeviceToken"
+
+	NotificationErrorReasonIOSUnregistered   = NotificationErrorReason(IOSResponseReasonUnregistered)
+	NotificationErrorReasonIOSBadDeviceToken = NotificationErrorReason(IOSResponseReasonBadDeviceToken)
+
+	AndroidResponseReasonMismatchSenderId    = "MismatchSenderId"
+	AndroidResponseReasonNotRegistered       = "NotRegistered"
+	AndroidResponseReasonInvalidRegistration = "InvalidRegistration"
+	AndroidResponseReasonInternalServerError = "InternalServerError"
+
+	NotificationErrorReasonAndroidMismatchSenderId    = NotificationErrorReason(AndroidResponseReasonMismatchSenderId)
+	NotificationErrorReasonAndroidNotRegistered       = NotificationErrorReason(AndroidResponseReasonNotRegistered)
+	NotificationErrorReasonAndroidInvalidRegistration = NotificationErrorReason(AndroidResponseReasonInvalidRegistration)
+	NotificationErrorReasonAndroidInternalServerError = NotificationErrorReason(AndroidResponseReasonInternalServerError)
+)
+
+var (
+	IOSReason2NotificationErrorReason = map[string]NotificationErrorReason{
+		IOSResponseReasonUnregistered:   NotificationErrorReasonIOSUnregistered,
+		IOSResponseReasonBadDeviceToken: NotificationErrorReasonIOSBadDeviceToken,
+	}
+
+	AndroidReason2NotificationErrorReason = map[string]NotificationErrorReason{
+		AndroidResponseReasonMismatchSenderId:    NotificationErrorReasonAndroidMismatchSenderId,
+		AndroidResponseReasonNotRegistered:       NotificationErrorReasonAndroidNotRegistered,
+		AndroidResponseReasonInvalidRegistration: NotificationErrorReasonAndroidInvalidRegistration,
+		AndroidResponseReasonInternalServerError: NotificationErrorReasonAndroidInternalServerError,
+	}
+
+	ErrInvalidNotificationErrorReason = errors.New("invalid Notification Error Reason")
+	ErrInvalidNotificationDeviceOS    = errors.New("invalid Notification Device OS")
 )
 
 func New(err, token string, deviceOS MobileOS, reason NotificationErrorReason) (ne NotificationError) {
@@ -48,4 +78,25 @@ func (e *NotificationError) DeviceOS() MobileOS {
 
 func (e *NotificationError) Reason() NotificationErrorReason {
 	return e.reason
+}
+
+func GetNotificationErrorReason(deviceOS MobileOS, responseReason string) (NotificationErrorReason, error) {
+	var reasonMap map[string]NotificationErrorReason
+
+	switch deviceOS {
+	case IOS:
+		reasonMap = IOSReason2NotificationErrorReason
+	case Android:
+		reasonMap = AndroidReason2NotificationErrorReason
+	default:
+		return "", ErrInvalidNotificationDeviceOS
+	}
+
+	reason, ok := reasonMap[responseReason]
+	if !ok {
+		// There may be other reason values that is not captured in this service,
+		// therefore creating them dynamically to record them
+		return NotificationErrorReason(responseReason), nil
+	}
+	return reason, nil
 }
