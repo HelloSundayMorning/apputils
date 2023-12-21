@@ -184,6 +184,10 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 	if len(notificationErrors) > 0 {
 		// Users might delete app and reinstall => that'll create new token and the existed one will be invalid.
 		log.Printf(ctx, component, "Failed to send notification to tokens %#v\n", notificationErrors)
+
+		return &DataNotificationError{
+			NotificationErrors: notificationErrors,
+		}
 	}
 
 	return nil

@@ -6,6 +6,12 @@ import (
 )
 
 type (
+	// DataNotificationError represents all errors from calling `sendDataNotification()`
+	// It holds a slice of NotificationError instances
+	DataNotificationError struct {
+		NotificationErrors []NotificationError
+	}
+
 	// NotificationError represents a single notification error
 	// It holds an instance of the underlying error, possible an instance of NotificationRequestError
 	NotificationError struct {
@@ -62,6 +68,14 @@ var (
 	ErrInvalidNotificationErrorReason = errors.New("invalid Notification Error Reason")
 	ErrInvalidNotificationDeviceOS    = errors.New("invalid Notification Device OS")
 )
+
+func (e *DataNotificationError) Error() string {
+	return fmt.Sprintf("failed sending data notification to %v tokens", len(e.NotificationErrors))
+}
+
+func (e *NotificationError) Error() string {
+	return e.Err.Error()
+}
 
 func New(err, token string, deviceOS MobileOS, reason NotificationRequestErrorReason) (ne NotificationRequestError) {
 	return NotificationRequestError{
