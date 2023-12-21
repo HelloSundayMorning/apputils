@@ -69,11 +69,11 @@ var (
 	ErrInvalidNotificationDeviceOS    = errors.New("invalid Notification Device OS")
 )
 
-func (e *DataNotificationError) Error() string {
+func (e DataNotificationError) Error() string {
 	return fmt.Sprintf("failed sending data notification to %v tokens", len(e.NotificationErrors))
 }
 
-func (e *NotificationError) Error() string {
+func (e NotificationError) Error() string {
 	return e.Err.Error()
 }
 
@@ -86,7 +86,7 @@ func New(err, token string, deviceOS MobileOS, reason NotificationRequestErrorRe
 	}
 }
 
-func (e *NotificationRequestError) Error() string {
+func (e NotificationRequestError) Error() string {
 	return fmt.Sprintf("failed sending %s notification to %s: %s - %s", e.DeviceOS, e.TokenStr, e.Reason, e.ErrMsg)
 }
 
