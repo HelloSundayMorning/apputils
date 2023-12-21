@@ -7,9 +7,10 @@ import (
 
 type (
 	// NotificationError represents a single notification error
+	// It holds an instance of the underlying error, possible an instance of NotificationRequestError
 	NotificationError struct {
-		Token    Token
-		ErrorMsg string
+		Token Token
+		Err   error
 	}
 
 	// NotificationRequestErrorReason represents the error categories set by the iOS and the Android push notification service

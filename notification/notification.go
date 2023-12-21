@@ -164,19 +164,19 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 			err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				notificationErrors = append(notificationErrors, NotificationError{Token: token, ErrorMsg: err.Error()})
+				notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
 			}
 
 		case Android:
 			err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				notificationErrors = append(notificationErrors, NotificationError{Token: token, ErrorMsg: err.Error()})
+				notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
 			}
 
 		default:
 			err = fmt.Errorf("invalid DeviceOS: %s", token.DeviceOS)
-			notificationErrors = append(notificationErrors, NotificationError{Token: token, ErrorMsg: err.Error()})
+			notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
 		}
 
 	}
