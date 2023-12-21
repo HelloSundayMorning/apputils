@@ -222,19 +222,19 @@ func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context
 	if !r.Sent() {
 		log.Printf(ctx, component, "Fail to send IOS Data notification, Status %d, ID %s, Reason %s", r.StatusCode, r.ApnsID, r.Reason)
 
-		reason, err := GetNotificationErrorReason(IOS, r.Reason)
+		reason, err := GetNotificationRequestErrorReason(IOS, r.Reason)
 		if err != nil {
 			log.Printf(ctx, component, "Fail to get IOS Data notification error reason: %s", err)
-			reason = DefaultResponseReason
+			reason = DefaultNotificationResponseReason
 
 			// no need to reture here, the purpose is to capture the error state
 		}
 
-		err = &NotificationError{
-			err:      "fail to send IOS Data notification",
-			token:    userDeviceToken,
-			deviceOS: IOS,
-			reason:   reason,
+		err = &NotificationRequestError{
+			ErrMsg:   "fail to send IOS Data notification",
+			TokenStr: userDeviceToken,
+			DeviceOS: IOS,
+			Reason:   reason,
 		}
 
 		return err
@@ -300,28 +300,28 @@ func (manager *AppMobileNotificationManager) sendAndroidDataNotification(ctx con
 	if r.Success != 1 {
 		log.Printf(ctx, component, "Fail to send Android Data Notification. Failure code %d, Results %v, id %d", r.Failure, r.Results, r.CanonicalIDs)
 
-		var reason NotificationErrorReason
+		var reason NotificationRequestErrorReason
 
 		if len(r.Results) > 0 {
 			// r.Results is in the form of [{ MismatchSenderId}]
-			reason, err = GetNotificationErrorReason(Android, r.Results[0].Error)
+			reason, err = GetNotificationRequestErrorReason(Android, r.Results[0].Error)
 			if err != nil {
 				log.Printf(ctx, component, "Fail to get Android Data notification error reason: %s", err)
-				reason = DefaultResponseReason
+				reason = DefaultNotificationResponseReason
 
 				// no need to reture here, the purpose is to capture the error state
 			}
 		} else {
 			log.Printf(ctx, component, "Fail to get GCM response results: %s", r.Results)
 
-			reason = DefaultResponseReason
+			reason = DefaultNotificationResponseReason
 		}
 
-		err = &NotificationError{
-			err:      "fail to send Android Data notification",
-			token:    userDeviceToken,
-			deviceOS: IOS,
-			reason:   reason,
+		err = &NotificationRequestError{
+			ErrMsg:   "fail to send Android Data notification",
+			TokenStr: userDeviceToken,
+			DeviceOS: IOS,
+			Reason:   reason,
 		}
 
 		return err
