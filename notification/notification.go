@@ -14,11 +14,6 @@ import (
 )
 
 type (
-	NotificationErrors struct {
-		Token    Token
-		ErrorMsg string
-	}
-
 	MobileNotificationManager interface {
 		AddNotificationToken(ctx context.Context, userID string, token string, deviceOs MobileOS) (err error)
 		SendAlert(ctx context.Context, userID, title, message string) (err error)
@@ -158,7 +153,7 @@ func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx conte
 
 func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Context, tokens []Token, title, message string, customData map[string]interface{}) (err error) {
 
-	var notificationErrors []NotificationErrors
+	var notificationErrors []NotificationError
 
 	for _, token := range tokens {
 
@@ -169,19 +164,19 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 			err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				notificationErrors = append(notificationErrors, NotificationErrors{Token: token, ErrorMsg: err.Error()})
+				notificationErrors = append(notificationErrors, NotificationError{Token: token, ErrorMsg: err.Error()})
 			}
 
 		case Android:
 			err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				notificationErrors = append(notificationErrors, NotificationErrors{Token: token, ErrorMsg: err.Error()})
+				notificationErrors = append(notificationErrors, NotificationError{Token: token, ErrorMsg: err.Error()})
 			}
 
 		default:
 			err = fmt.Errorf("invalid DeviceOS: %s", token.DeviceOS)
-			notificationErrors = append(notificationErrors, NotificationErrors{Token: token, ErrorMsg: err.Error()})
+			notificationErrors = append(notificationErrors, NotificationError{Token: token, ErrorMsg: err.Error()})
 		}
 
 	}

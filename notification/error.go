@@ -6,6 +6,12 @@ import (
 )
 
 type (
+	// NotificationError represents a single notification error
+	NotificationError struct {
+		Token    Token
+		ErrorMsg string
+	}
+
 	// NotificationRequestErrorReason represents the error categories set by the iOS and the Android push notification service
 	NotificationRequestErrorReason string
 
