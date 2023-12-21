@@ -50,17 +50,15 @@ const (
 						FROM notification_token WHERE error_msg is null;`
 )
 
-func (t *Token) SetErrorMsg(errMsg *string) (err error) {
+func (t *Token) SetErrorMsg(errMsg *string) {
 
-	if errMsg != nil {
+	if errMsg != nil && *errMsg != "" {
 		t.ErrorMsg = errMsg
 	} else {
 		t.ErrorMsg = nil
 	}
 
 	t.UpdatedAt = time.Now().UTC().UnixNano()
-
-	return nil
 }
 
 func (manager *AppMobileNotificationManager) AddNotificationToken(ctx context.Context, userID string, token string, deviceOs MobileOS) (err error) {
