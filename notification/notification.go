@@ -229,7 +229,7 @@ func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context
 			// no need to reture here, the purpose is to capture the error state
 		}
 
-		err = &NotificationRequestError{
+		err = NotificationRequestError{
 			ErrMsg:   "fail to send IOS Data notification",
 			TokenStr: userDeviceToken,
 			DeviceOS: IOS,
@@ -316,7 +316,7 @@ func (manager *AppMobileNotificationManager) sendAndroidDataNotification(ctx con
 			reason = DefaultNotificationResponseReason
 		}
 
-		err = &NotificationRequestError{
+		err = NotificationRequestError{
 			ErrMsg:   "fail to send Android Data notification",
 			TokenStr: userDeviceToken,
 			DeviceOS: IOS,
