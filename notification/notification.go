@@ -1,7 +1,7 @@
 package notification
 
 import (
-	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/HelloSundayMorning/apputils/app"
@@ -14,15 +14,6 @@ import (
 )
 
 type (
-	MobileOS string
-
-	Token struct {
-		UserID    string
-		Token     string
-		DeviceOS  MobileOS
-		CreatedAt int64
-	}
-
 	MobileNotificationManager interface {
 		AddNotificationToken(ctx context.Context, userID string, token string, deviceOs MobileOS) (err error)
 		SendAlert(ctx context.Context, userID, title, message string) (err error)
@@ -37,30 +28,7 @@ type (
 )
 
 const (
-	IOS     = MobileOS("ios")
-	Android = MobileOS("android")
-
 	component = "mobileNotificationManager"
-
-	createTokenTable = `CREATE TABLE IF NOT EXISTS notification_token (
-									 user_id                    uuid                      not null,
-									 token                      varchar(500)              not null,
-									 device_os                  varchar(50)               not null,
-                                     created_at                 bigint                    not null,
-                                     PRIMARY KEY (user_id, token, device_os));`
-
-	insertToken = `INSERT INTO notification_token (user_id, token, device_os, created_at)
-                                VALUES ($1, $2, $3, $4)
-                                ON CONFLICT (user_id, token, device_os)
-                                DO UPDATE SET
-                                created_at = $4`
-
-	findTokenByUser = `SELECT user_id, token, device_os, created_at
-                    FROM notification_token
-                    WHERE user_id = $1`
-
-	findAllTokens = `SELECT user_id, token, device_os, created_at
-                    FROM notification_token`
 )
 
 func NewMobileNotificationManagerApp(appID app.ApplicationID, sqlDb db.AppSqlDb, iOsClient *apns.Client, fcmClient *fcm.Sender) (manager *AppMobileNotificationManager, err error) {
@@ -117,93 +85,6 @@ func (manager *AppMobileNotificationManager) initialize() (err error) {
 	}
 
 	return nil
-}
-
-func (manager *AppMobileNotificationManager) AddNotificationToken(ctx context.Context, userID string, token string, deviceOs MobileOS) (err error) {
-
-	err = manager.store(ctx, Token{
-		UserID:    userID,
-		Token:     token,
-		DeviceOS:  deviceOs,
-		CreatedAt: time.Now().UTC().UnixNano(),
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (manager *AppMobileNotificationManager) store(ctx context.Context, token Token) (err error) {
-
-	conn := manager.sqlDb.GetDB()
-
-	tx, err := conn.BeginTx(ctx, nil)
-
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.Prepare(insertToken)
-
-	if err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-
-	_, err = stmt.Exec(token.UserID, token.Token, token.DeviceOS, token.CreatedAt)
-
-	if err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-
-	err = tx.Commit()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-
-}
-
-// findTokens returns the tokens of userID
-// or all tokens if passing nil
-func (manager *AppMobileNotificationManager) findTokens(userID *string) (tokens []Token, err error) {
-
-	var rows *sql.Rows
-
-	if userID == nil || *userID == "" {
-		rows, err = manager.sqlDb.GetDB().Query(findAllTokens)
-	} else {
-		rows, err = manager.sqlDb.GetDB().Query(findTokenByUser, *userID)
-	}
-
-	if err != nil {
-		return tokens, err
-	}
-
-	defer func() {
-		_ = rows.Close()
-	}()
-
-	for rows.Next() {
-
-		var token Token
-
-		err = rows.Scan(&token.UserID, &token.Token, &token.DeviceOS, &token.CreatedAt)
-
-		if err != nil {
-			return tokens, err
-		}
-
-		tokens = append(tokens, token)
-
-	}
-
-	return tokens, err
 }
 
 func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, userID, title, message string) (err error) {
@@ -272,7 +153,7 @@ func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx conte
 
 func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Context, tokens []Token, title, message string, customData map[string]interface{}) (err error) {
 
-	var errTokens []Token
+	var notificationErrors []NotificationError
 
 	for _, token := range tokens {
 
@@ -283,22 +164,30 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 			err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				errTokens = append(errTokens, token)
+				notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
 			}
 
 		case Android:
 			err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
 
 			if err != nil {
-				errTokens = append(errTokens, token)
+				notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
 			}
+
+		default:
+			err = fmt.Errorf("invalid DeviceOS: %s", token.DeviceOS)
+			notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
 		}
 
 	}
 
-	if len(errTokens) > 0 {
+	if len(notificationErrors) > 0 {
 		// Users might delete app and reinstall => that'll create new token and the existed one will be invalid.
-		log.Printf(ctx, component, "Failed to send notification to tokens %#v\n", errTokens)
+		log.Printf(ctx, component, "Failed to send notification to tokens %#v\n", notificationErrors)
+
+		return &DataNotificationError{
+			NotificationErrors: notificationErrors,
+		}
 	}
 
 	return nil
@@ -325,14 +214,32 @@ func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context
 	r, err := manager.IosClient.Push(&notification)
 
 	if err != nil {
+		log.Printf(ctx, component, "Error sending IOS Data notification. Error: %s", err)
 		return err
 	}
 
-	if r.Sent() {
-		log.Printf(ctx, component, "Sent IOS Data notification, Status %d, ID %s", r.StatusCode, r.ApnsID)
-	} else {
+	if !r.Sent() {
 		log.Printf(ctx, component, "Fail to send IOS Data notification, Status %d, ID %s, Reason %s", r.StatusCode, r.ApnsID, r.Reason)
+
+		reason, err := GetNotificationRequestErrorReason(IOS, r.Reason)
+		if err != nil {
+			log.Printf(ctx, component, "Fail to get IOS Data notification error reason: %s", err)
+			reason = DefaultNotificationResponseReason
+
+			// no need to reture here, the purpose is to capture the error state
+		}
+
+		err = &NotificationRequestError{
+			ErrMsg:   "fail to send IOS Data notification",
+			TokenStr: userDeviceToken,
+			DeviceOS: IOS,
+			Reason:   reason,
+		}
+
+		return err
 	}
+
+	log.Printf(ctx, component, "Sent IOS Data notification, Status %d, ID %s", r.StatusCode, r.ApnsID)
 
 	return nil
 
@@ -383,15 +290,43 @@ func (manager *AppMobileNotificationManager) sendAndroidDataNotification(ctx con
 	}
 
 	r, err := manager.FcmClient.Send(msg, 2)
+
 	if err != nil {
+		log.Printf(ctx, component, "Error sending Android Data notification. Error: %s", err)
 		return err
 	}
 
-	if r.Success == 1 {
-		log.Printf(ctx, component, "Sent Android Data Notification. Results %v, id %d", r.Results, r.CanonicalIDs)
-	} else {
-		log.Printf(ctx, component, "Fail to send Data Notification. Failure code %d, Results %v, id %d", r.Failure, r.Results, r.CanonicalIDs)
+	if r.Success != 1 {
+		log.Printf(ctx, component, "Fail to send Android Data Notification. Failure code %d, Results %v, id %d", r.Failure, r.Results, r.CanonicalIDs)
+
+		var reason NotificationRequestErrorReason
+
+		if len(r.Results) > 0 {
+			// r.Results is in the form of [{ MismatchSenderId}]
+			reason, err = GetNotificationRequestErrorReason(Android, r.Results[0].Error)
+			if err != nil {
+				log.Printf(ctx, component, "Fail to get Android Data notification error reason: %s", err)
+				reason = DefaultNotificationResponseReason
+
+				// no need to reture here, the purpose is to capture the error state
+			}
+		} else {
+			log.Printf(ctx, component, "Fail to get GCM response results: %s", r.Results)
+
+			reason = DefaultNotificationResponseReason
+		}
+
+		err = &NotificationRequestError{
+			ErrMsg:   "fail to send Android Data notification",
+			TokenStr: userDeviceToken,
+			DeviceOS: IOS,
+			Reason:   reason,
+		}
+
+		return err
 	}
+
+	log.Printf(ctx, component, "Sent Android Data Notification. Results %v, id %d", r.Results, r.CanonicalIDs)
 
 	return nil
 }
