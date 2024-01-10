@@ -176,10 +176,12 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 
 		// accumulate only notificationRequestErrors
 		// log other errors and let push notifications continue being sent
-		if errors.As(err, &notificationRequestError) {
-			notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: notificationRequestError})
-		} else {
-			log.Printf(ctx, component, "Failed to send notification to token %#v: %s", token, err)
+		if err != nil {
+			if errors.As(err, &notificationRequestError) {
+				notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: notificationRequestError})
+			} else {
+				log.Printf(ctx, component, "Failed to send notification to token %#v: %s", token, err)
+			}
 		}
 	}
 
