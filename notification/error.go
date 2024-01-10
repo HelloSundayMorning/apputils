@@ -16,7 +16,7 @@ type (
 	// It holds an instance of the underlying error, possible an instance of NotificationRequestError
 	NotificationError struct {
 		Token Token
-		Err   error
+		Err   NotificationRequestError
 	}
 
 	// NotificationRequestErrorReason represents the error categories set by the iOS and the Android push notification service

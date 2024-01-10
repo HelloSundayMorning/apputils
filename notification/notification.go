@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -153,32 +154,33 @@ func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx conte
 
 func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Context, tokens []Token, title, message string, customData map[string]interface{}) (err error) {
 
+	// notificationErrors is a collection of (Token, NotificationRequestError) pairs
 	var notificationErrors []NotificationError
 
 	for _, token := range tokens {
 
-		log.Printf(ctx, component, "Trying %s token created %v", token.DeviceOS, time.Unix(0, token.CreatedAt))
+		log.Printf(ctx, component, "Trying %s token, created at %v", token.DeviceOS, time.Unix(0, token.CreatedAt))
 
 		switch token.DeviceOS {
 		case IOS:
 			err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
 
-			if err != nil {
-				notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
-			}
-
 		case Android:
 			err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
 
-			if err != nil {
-				notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
-			}
-
 		default:
 			err = fmt.Errorf("invalid DeviceOS: %s", token.DeviceOS)
-			notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: err})
 		}
 
+		var notificationRequestError NotificationRequestError
+
+		// accumulate only notificationRequestErrors
+		// log other errors and let push notifications continue being sent
+		if errors.As(err, &notificationRequestError) {
+			notificationErrors = append(notificationErrors, NotificationError{Token: token, Err: notificationRequestError})
+		} else {
+			log.Printf(ctx, component, "Failed to send notification to token %#v: %s", token, err)
+		}
 	}
 
 	if len(notificationErrors) > 0 {
@@ -193,6 +195,9 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 	return nil
 }
 
+// sendIOSDataNotification sends a single iOS notification
+//
+//	returns either a NotificationRequestError or a generic error
 func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context.Context, userDeviceToken, title, message string, customData map[string]interface{}) (err error) {
 
 	dataPayload := payload.NewPayload().
@@ -224,6 +229,7 @@ func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context
 		reason, err := GetNotificationRequestErrorReason(IOS, r.Reason)
 		if err != nil {
 			log.Printf(ctx, component, "Fail to get IOS Data notification error reason: %s", err)
+
 			reason = DefaultNotificationResponseReason
 
 			// no need to reture here, the purpose is to capture the error state
@@ -272,6 +278,9 @@ func (manager *AppMobileNotificationManager) sendIOSAlert(ctx context.Context, u
 	return nil
 }
 
+// sendAndroidDataNotification sends a single Android notification
+//
+//	returns either a NotificationRequestError or a generic error
 func (manager *AppMobileNotificationManager) sendAndroidDataNotification(ctx context.Context, userDeviceToken, title, message string, customData map[string]interface{}) (err error) {
 
 	regIDs := []string{userDeviceToken}

@@ -61,14 +61,9 @@ func (t *Token) SetErrorMsg(errMsg *string) {
 	t.UpdatedAt = time.Now().UTC().UnixNano()
 }
 
-func (manager *AppMobileNotificationManager) AddNotificationToken(ctx context.Context, userID string, token string, deviceOs MobileOS) (err error) {
+func (manager *AppMobileNotificationManager) AddNotificationToken(ctx context.Context, token Token) (err error) {
 
-	err = manager.store(ctx, Token{
-		UserID:    userID,
-		Token:     token,
-		DeviceOS:  deviceOs,
-		CreatedAt: time.Now().UTC().UnixNano(),
-	})
+	err = manager.store(ctx, token)
 
 	if err != nil {
 		return err
