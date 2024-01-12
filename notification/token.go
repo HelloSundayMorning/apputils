@@ -42,12 +42,32 @@ const (
 									error_msg  = $5,
 									updated_at = $6;`
 
-	findValidTokenByUser = `SELECT user_id, token, device_os, created_at, error_msg, updated_at
-					FROM notification_token
-					WHERE user_id = $1 AND error_msg is null;`
+	findValidTokenByUser = `WITH recent_tokens AS (SELECT user_id, device_os, MAX(created_at) AS created_at
+	FROM notification_token
+	WHERE user_id = $1
+	  AND error_msg IS NULL
+	GROUP BY user_id, device_os)
+SELECT notification_token.user_id,
+notification_token.token,
+notification_token.device_os,
+notification_token.created_at,
+notification_token.error_msg,
+notification_token.updated_at
+FROM notification_token
+INNER JOIN recent_tokens ON notification_token.created_at = recent_tokens.created_at;`
 
-	findAllValidTokens = `SELECT user_id, token, device_os, created_at, error_msg, updated_at
-						FROM notification_token WHERE error_msg is null;`
+	findAllValidTokens = `WITH recent_tokens AS (SELECT user_id, device_os, MAX(created_at) AS created_at
+	FROM notification_token
+	WHERE error_msg IS NULL
+	GROUP BY user_id, device_os)
+SELECT notification_token.user_id,
+notification_token.token,
+notification_token.device_os,
+notification_token.created_at,
+notification_token.error_msg,
+notification_token.updated_at
+FROM notification_token
+INNER JOIN recent_tokens ON notification_token.created_at = recent_tokens.created_at;`
 )
 
 func (t *Token) SetErrorMsg(errMsg *string) {
