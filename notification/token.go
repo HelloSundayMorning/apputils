@@ -68,6 +68,10 @@ notification_token.error_msg,
 notification_token.updated_at
 FROM notification_token
 INNER JOIN recent_tokens ON notification_token.created_at = recent_tokens.created_at;`
+
+	findAllValidUserIDs = `SELECT user_id
+	FROM notification_token
+	WHERE error_msg IS NULL;`
 )
 
 func (t *Token) SetErrorMsg(errMsg *string) {
@@ -161,4 +165,35 @@ func (manager *AppMobileNotificationManager) findTokens(userID *string) (tokens 
 	}
 
 	return tokens, err
+}
+
+// FindUserIDs returns the userIDs of all valid tokens
+func (manager *AppMobileNotificationManager) FindUserIDs() (userIDs []string, err error) {
+
+	var rows *sql.Rows
+
+	rows, err = manager.sqlDb.GetDB().Query(findAllValidUserIDs)
+
+	if err != nil {
+		return userIDs, err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	for rows.Next() {
+
+		var userID string
+
+		err = rows.Scan(&userID)
+
+		if err != nil {
+			return userIDs, err
+		}
+
+		userIDs = append(userIDs, userID)
+	}
+
+	return userIDs, nil
 }

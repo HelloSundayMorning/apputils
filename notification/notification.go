@@ -18,6 +18,7 @@ type (
 	MobileNotificationManager interface {
 		AddNotificationToken(ctx context.Context, userID string, token string, deviceOs MobileOS) (err error)
 		SendAlert(ctx context.Context, userID, title, message string) (err error)
+		FindUserIDs() (userIDs []string, err error)
 	}
 
 	AppMobileNotificationManager struct {
