@@ -125,6 +125,8 @@ func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, user
 	return nil
 }
 
+// BroadcastDataNotification sends a push notification to the given userID
+// On error, it returns an instance of DataNotificationError
 func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Context, userID, title, message string, customData map[string]interface{}) (err error) {
 
 	tokens, err := manager.findTokens(&userID)
@@ -136,9 +138,11 @@ func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Co
 
 	log.Printf(ctx, component, "Found %d tokens for user %s. Trying to send all", len(tokens), userID)
 
-	return manager.sendDataNotification(ctx, tokens, title, message, customData)
+	return manager.sendDataNotifications(ctx, tokens, title, message, customData)
 }
 
+// BroadcastDataNotification sends a push notification to all available tokens
+// On error, it returns an instance of DataNotificationError
 func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx context.Context, title, message string, customData map[string]interface{}) (err error) {
 
 	tokens, err := manager.findTokens(nil)
@@ -150,28 +154,17 @@ func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx conte
 
 	log.Printf(ctx, component, "Found %d tokens for broadcasting. Trying to send all", len(tokens))
 
-	return manager.sendDataNotification(ctx, tokens, title, message, customData)
+	return manager.sendDataNotifications(ctx, tokens, title, message, customData)
 }
 
-func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Context, tokens []Token, title, message string, customData map[string]interface{}) (err error) {
+func (manager *AppMobileNotificationManager) sendDataNotifications(ctx context.Context, tokens []Token, title, message string, customData map[string]interface{}) (err error) {
 
 	// notificationErrors is a collection of (Token, NotificationRequestError) pairs
 	var notificationErrors []NotificationError
 
 	for _, token := range tokens {
 
-		log.Printf(ctx, component, "Trying %s token, created at %v", token.DeviceOS, time.Unix(0, token.CreatedAt))
-
-		switch token.DeviceOS {
-		case IOS:
-			err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
-
-		case Android:
-			err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
-
-		default:
-			err = fmt.Errorf("invalid DeviceOS: %s", token.DeviceOS)
-		}
+		err = manager.sendDataNotification(ctx, token, title, message, customData)
 
 		var notificationRequestError NotificationRequestError
 
@@ -195,6 +188,34 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 		}
 	}
 
+	return nil
+}
+
+// SendDataNotificationByToken sends a single push notification by the token param
+// On error, it returns an wrapped NotificationRequestError instance.
+func (manager *AppMobileNotificationManager) SendDataNotificationByToken(ctx context.Context, token Token, title, message string, customData map[string]interface{}) (err error) {
+
+	return manager.sendDataNotification(ctx, token, title, message, customData)
+}
+
+func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Context, token Token, title, message string, customData map[string]interface{}) (err error) {
+
+	log.Printf(ctx, component, "Trying %s token, created at %v", token.DeviceOS, time.Unix(0, token.CreatedAt))
+
+	switch token.DeviceOS {
+	case IOS:
+		err = manager.sendIOSDataNotification(ctx, token.Token, title, message, customData)
+
+	case Android:
+		err = manager.sendAndroidDataNotification(ctx, token.Token, title, message, customData)
+
+	default:
+		err = fmt.Errorf("invalid DeviceOS: %s", token.DeviceOS)
+	}
+
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
