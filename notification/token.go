@@ -130,9 +130,9 @@ func (manager *AppMobileNotificationManager) store(ctx context.Context, token To
 
 }
 
-// findTokens returns the tokens of userID
+// FindTokens returns the tokens of userID
 // or all tokens if passing nil
-func (manager *AppMobileNotificationManager) findTokens(userID *string) (tokens []Token, err error) {
+func (manager *AppMobileNotificationManager) FindTokens(userID *string) (tokens []Token, err error) {
 
 	var rows *sql.Rows
 

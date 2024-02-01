@@ -18,6 +18,7 @@ type (
 	MobileNotificationManager interface {
 		AddNotificationToken(ctx context.Context, userID string, token string, deviceOs MobileOS) (err error)
 		SendAlert(ctx context.Context, userID, title, message string) (err error)
+		FindTokens(userID *string) (tokens []Token, err error)
 		FindUserIDs() (userIDs []string, err error)
 	}
 
@@ -91,7 +92,7 @@ func (manager *AppMobileNotificationManager) initialize() (err error) {
 
 func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, userID, title, message string) (err error) {
 
-	tokens, err := manager.findTokens(&userID)
+	tokens, err := manager.FindTokens(&userID)
 
 	if err != nil {
 		log.Errorf(ctx, component, "Error finding tokens for user %s", userID)
@@ -129,7 +130,7 @@ func (manager *AppMobileNotificationManager) SendAlert(ctx context.Context, user
 // On error, it returns an instance of DataNotificationError
 func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Context, userID, title, message string, customData map[string]interface{}) (err error) {
 
-	tokens, err := manager.findTokens(&userID)
+	tokens, err := manager.FindTokens(&userID)
 
 	if err != nil {
 		log.Errorf(ctx, component, "Error finding tokens for user %s", userID)
@@ -145,7 +146,7 @@ func (manager *AppMobileNotificationManager) SendDataNotification(ctx context.Co
 // On error, it returns an instance of DataNotificationError
 func (manager *AppMobileNotificationManager) BroadcastDataNotification(ctx context.Context, title, message string, customData map[string]interface{}) (err error) {
 
-	tokens, err := manager.findTokens(nil)
+	tokens, err := manager.FindTokens(nil)
 
 	if err != nil {
 		log.Errorf(ctx, component, "Error finding tokens for broadcasting (%s)", err)
