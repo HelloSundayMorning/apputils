@@ -193,15 +193,13 @@ func (manager *AppMobileNotificationManager) sendDataNotifications(ctx context.C
 }
 
 // SendDataNotificationByToken sends a single push notification by the token param
-// On error, it returns an wrapped NotificationRequestError instance.
+// On error, it returns a wrapped NotificationError instance.
 func (manager *AppMobileNotificationManager) SendDataNotificationByToken(ctx context.Context, token Token, title, message string, customData map[string]interface{}) (err error) {
 
 	return manager.sendDataNotification(ctx, token, title, message, customData)
 }
 
 func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Context, token Token, title, message string, customData map[string]interface{}) (err error) {
-
-	log.Printf(ctx, component, "Trying %s token, created at %v", token.DeviceOS, time.Unix(0, token.CreatedAt))
 
 	switch token.DeviceOS {
 	case IOS:
@@ -215,6 +213,12 @@ func (manager *AppMobileNotificationManager) sendDataNotification(ctx context.Co
 	}
 
 	if err != nil {
+		var notificationRequestError NotificationRequestError
+
+		if errors.As(err, &notificationRequestError) {
+			err = NotificationError{Token: token, Err: notificationRequestError}
+		}
+
 		return err
 	}
 	return nil
@@ -269,8 +273,6 @@ func (manager *AppMobileNotificationManager) sendIOSDataNotification(ctx context
 
 		return err
 	}
-
-	log.Printf(ctx, component, "Sent IOS Data notification, Status %d, ID %s", r.StatusCode, r.ApnsID)
 
 	return nil
 
@@ -359,8 +361,6 @@ func (manager *AppMobileNotificationManager) sendAndroidDataNotification(ctx con
 
 		return err
 	}
-
-	log.Printf(ctx, component, "Sent Android Data Notification. Results %v, id %d", r.Results, r.CanonicalIDs)
 
 	return nil
 }
