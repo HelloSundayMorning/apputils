@@ -9,14 +9,7 @@ type (
 	// DataNotificationError represents all errors from calling `sendDataNotification()`
 	// It holds a slice of NotificationError instances
 	DataNotificationError struct {
-		NotificationErrors []NotificationError
-	}
-
-	// NotificationError represents a single notification error
-	// It holds an instance of the underlying error, possible an instance of NotificationRequestError
-	NotificationError struct {
-		Token Token
-		Err   NotificationRequestError
+		NotificationRequestErrors []NotificationRequestError
 	}
 
 	// NotificationRequestErrorReason represents the error categories set by the iOS and the Android push notification service
@@ -26,7 +19,7 @@ type (
 	NotificationRequestError struct {
 		ErrMsg string
 
-		TokenStr string                         // the device token
+		Token    Token                          // the device token
 		DeviceOS MobileOS                       // the device OS, ither 'ios' or 'android'
 		Reason   NotificationRequestErrorReason // the reason from the error response given by the push notification services
 	}
@@ -70,24 +63,20 @@ var (
 )
 
 func (e DataNotificationError) Error() string {
-	return fmt.Sprintf("failed sending data notification to %v tokens", len(e.NotificationErrors))
+	return fmt.Sprintf("failed sending data notification to %v tokens", len(e.NotificationRequestErrors))
 }
 
-func (e NotificationError) Error() string {
-	return e.Err.Error()
-}
-
-func New(err, token string, deviceOS MobileOS, reason NotificationRequestErrorReason) (ne NotificationRequestError) {
+func New(err string, token Token, deviceOS MobileOS, reason NotificationRequestErrorReason) (ne NotificationRequestError) {
 	return NotificationRequestError{
 		ErrMsg:   err,
-		TokenStr: token,
+		Token:    token,
 		DeviceOS: deviceOS,
 		Reason:   reason,
 	}
 }
 
 func (e NotificationRequestError) Error() string {
-	return fmt.Sprintf("failed sending %s notification to %s: %s - %s", e.DeviceOS, e.TokenStr, e.Reason, e.ErrMsg)
+	return fmt.Sprintf("failed sending %s notification to %s: %s - %s", e.DeviceOS, e.Token.Token, e.Reason, e.ErrMsg)
 }
 
 func GetNotificationRequestErrorReason(deviceOS MobileOS, responseReason string) (NotificationRequestErrorReason, error) {
