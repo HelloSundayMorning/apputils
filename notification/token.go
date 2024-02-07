@@ -23,6 +23,7 @@ type (
 const (
 	IOS     = MobileOS("ios")
 	Android = MobileOS("android")
+	Unknown = MobileOS("unknown")
 
 	createTokenTable = `CREATE TABLE IF NOT EXISTS notification_token
 	(
@@ -67,7 +68,8 @@ notification_token.created_at,
 notification_token.error_msg,
 notification_token.updated_at
 FROM notification_token
-INNER JOIN recent_tokens ON notification_token.created_at = recent_tokens.created_at;`
+INNER JOIN recent_tokens ON notification_token.created_at = recent_tokens.created_at
+ORDER BY device_os;`
 )
 
 func (t *Token) SetErrorMsg(errMsg *string) {
@@ -126,9 +128,9 @@ func (manager *AppMobileNotificationManager) store(ctx context.Context, token To
 
 }
 
-// findTokens returns the tokens of userID
+// FindTokens returns the tokens of userID
 // or all tokens if passing nil
-func (manager *AppMobileNotificationManager) findTokens(userID *string) (tokens []Token, err error) {
+func (manager *AppMobileNotificationManager) FindTokens(userID *string) (tokens []Token, err error) {
 
 	var rows *sql.Rows
 
