@@ -197,10 +197,9 @@ func (srv *AppServer) AddRoutePrefix(path string, handler http.HandlerFunc) erro
 //
 // Example call:
 //
-// 			srv.AddGraphQLHandler("/query", generated.NewExecutableSchema(generated.Config{
-//					Resolvers: &resolver.Resolver{},
-//			}))
-//
+//	srv.AddGraphQLHandler("/query", generated.NewExecutableSchema(generated.Config{
+//			Resolvers: &resolver.Resolver{},
+//	}))
 func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.ExecutableSchema) (err error) {
 
 	path = fmt.Sprintf("/%s%s", srv.AppID, path)
@@ -209,6 +208,13 @@ func (srv *AppServer) AddGraphQLHandler(path string, gqlSchema graphql.Executabl
 
 	gqlServer.AroundFields(func(ctx context.Context, next graphql.Resolver) (res interface{}, err error) {
 		tracing.AddTracingGraphQLInfo(ctx)
+		return next(ctx)
+	})
+
+	// Disable introspection queries
+	gqlServer.AroundOperations(func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
+		graphql.GetOperationContext(ctx).DisableIntrospection = true
+
 		return next(ctx)
 	})
 
